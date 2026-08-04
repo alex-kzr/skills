@@ -1,0 +1,11 @@
+interface:
+  display_name: "PlantUML Entities"
+  short_description: "Extract entities from .puml to Markdown"
+  icon_small: "./assets/puml-entities-small.svg"
+  icon_large: "./assets/puml-entities.svg"
+  brand_color: "#0F766E"
+  default_prompt: "Use $puml-entities to extract entities/classes/enums from a .puml and generate a Markdown snippet describing the data model (fields, types, PK/FK, required, enum values, relations)."
+
+policy:
+  allow_implicit_invocation: false
+

@@ -1,0 +1,25 @@
+
+.hub
+.curator_backups
+.bundled_manifest
+.curator_state
+.system
+.usage.json
+.usage.json.lock
+.idea/
+.prompts/
+.claude/
+*.iml
+*.ipr
+*.iws
+graphify-graph/
+/project-skills/
+
+# prevent skill-local dependency folders
+/**/node_modules/
+/**/.venv/
+/**/runtime/
+/**/__pycache__/
+/**/.pytest_cache/
+/**/.mypy_cache/
+/**/.ruff_cache/
