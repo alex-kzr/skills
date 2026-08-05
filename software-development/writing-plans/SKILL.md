@@ -1,7 +1,7 @@
 ---
 name: writing-plans
 description: "Write implementation plans: phases, tasks, kanban board, and individual task files. Use before implementing multi-step features, breaking down complex requirements, or delegating to subagents."
-version: 2.1.0
+version: 2.2.0
 author: Hermes Agent (adapted from obra/superpowers)
 license: MIT
 platforms: [linux, macos, windows]
@@ -80,6 +80,57 @@ Decide this while designing phases (Step 3), not as an afterthought — it direc
 ### Task Leases for Parallel Work
 
 When a phase is `parallel` (or multiple agents may otherwise work the same board concurrently), executors take a lightweight lease at `docs/.agents/locks/{task-id}.lock` before moving a task to "In Progress", and remove it on "Done" or when un-blocking back to "To Do". See [board-task-executor → Task Leases](../board-task-executor/SKILL.md#task-leases-parallel-safety) for the file format and rules. No plan-writing action is needed here beyond marking the phase `parallel` correctly — the lease mechanics are handled by the executor.
+
+## Task Metadata (Machine-Readable)
+
+Prose sections tell a human what to do. An `## Execution Metadata` block tells an orchestrator
+the same thing without guessing: what kind of task this is, who runs it, what it may write, what
+it depends on, and how it is checked. Add the block to every **new** task file.
+
+```markdown
+## Execution Metadata
+- Type: <rust | backend | frontend | ui | plugin | docs | research | design | tooling | agent-config>
+- Executor: <role name>
+- Depends on: <TASK-ID, TASK-ID | none>
+- Allowed scope: `<path glob>`, `<path glob>`
+- Out of scope: `<path glob>` | none
+- Required skills: `<exact path to a SKILL.md>` | none
+- Maximum repair attempts: 2
+- Documentation impact: `<doc path>` | none
+- Verification commands:
+  - `<cwd>` -> `<command>`
+- Blocking conditions: <text> | none
+```
+
+Rules that hold in every project:
+
+- The block sits between `## Status` and `## Purpose`, one `- Field: value` line per field.
+- Lists are comma-separated; backticks around paths are optional and ignored.
+- "Nothing" is always the literal `none`. An empty value is an error, never an implicit `none` —
+  an author must not be able to skip a decision by leaving a blank.
+- Paths are repository-relative and POSIX-separated. No absolute path, no `~`, no `..`.
+- `Required skills` names **exact** `SKILL.md` paths. "the Rust skill" is not a path.
+- `Verification commands` lists only commands the repository actually defines, one per entry,
+  with no shell operators (`|`, `&&`, `;`, `>`), so each has its own exit code.
+
+Pair it with a discrete criteria list so a verifier can tabulate evidence one row at a time:
+
+```markdown
+## Acceptance Criteria
+- [ ] AC-1 — <independently checkable statement>
+- [ ] AC-2 — <independently checkable statement>
+```
+
+`## Acceptance Criteria` replaces `## Definition of Done` in new task files — do not split
+criteria across both. Task files that predate the block keep `## Definition of Done`, and an
+orchestrator reads those checkboxes as `AC-1 … AC-n`.
+
+**Do not retrofit old task files.** The block is additive; historical tasks stay executable
+through documented defaults. Enrich an old file only when you are changing it anyway.
+
+**Project overrides.** When the project defines its own metadata contract — in this repository,
+`docs/agents/task-metadata-contract.md` — that document governs the exact field list, enums,
+aliases, defaults, and error messages, and this section is the summary of it.
 
 ## Plan File Template
 
@@ -174,6 +225,7 @@ All tasks start in **To Do** in execution order. Every entry must be a relative 
 ## Task File Template
 
 `docs/plans/tasks/{task-id}_{task-short-name}.md`
+(also available as a copyable file: [templates/task.md](templates/task.md))
 
 ```markdown
 # {task_id} - {title}
@@ -184,6 +236,19 @@ Plan — [YYYY-MM-DD-feature-name.md](../YYYY-MM-DD-feature-name.md)
 - [ ] To Do
 - [ ] In Progress
 - [ ] Done
+
+## Execution Metadata
+- Type: <rust | backend | frontend | ui | plugin | docs | research | design | tooling | agent-config>
+- Executor: <role name>
+- Depends on: <TASK-ID, TASK-ID | none>
+- Allowed scope: `<path glob>`
+- Out of scope: `<path glob>` | none
+- Required skills: `<exact path to a SKILL.md>` | none
+- Maximum repair attempts: 2
+- Documentation impact: `<doc path>` | none
+- Verification commands:
+  - `<cwd>` -> `<command>`
+- Blocking conditions: <text> | none
 
 ## Purpose
 Short description of why this task exists.
@@ -205,12 +270,9 @@ Background, links to related files, modules, or docs.
 - [ ] Integration tests
 - [ ] Manual testing
 
-## Definition of Done
-- [ ] Feature implemented
-- [ ] Works as expected
-- [ ] No regressions
-- [ ] Code is clean and consistent
-- [ ] Documentation is updated
+## Acceptance Criteria
+- [ ] AC-1 — <independently checkable statement>
+- [ ] AC-2 — <independently checkable statement>
 
 ## Affected Files / Components
 - file1
@@ -259,6 +321,9 @@ Include in each task file:
 - **Complete code examples** where relevant (copy-pasteable)
 - **Exact commands** with expected output
 - **Verification steps** proving the task is done
+- An **`## Execution Metadata` block** and an **`## Acceptance Criteria`** list, per
+  [Task Metadata](#task-metadata-machine-readable). Every field is a decision; write `none`
+  rather than leaving one blank.
 
 ### Step 6: Create the Kanban Board
 
@@ -271,6 +336,12 @@ Create or update `docs/kanban.md` with all tasks in **To Do** in execution order
 - [ ] All tasks are in `docs/kanban.md` under To Do
 - [ ] Tasks are atomic, sequential, testable
 - [ ] Every phase has an Execution mode tag (separate / parallel / same-session / whole-phase)
+- [ ] Every new task file has a complete `## Execution Metadata` block — no blank values, `none` written explicitly
+- [ ] `Depends on` names real task IDs and forms no cycle; the first task of a phase says `none`
+- [ ] `Required skills` names exact `SKILL.md` paths that exist
+- [ ] `Verification commands` uses only commands the repository defines, one per entry
+- [ ] Every new task file has `## Acceptance Criteria` numbered `AC-1 … AC-n`, each independently checkable
+- [ ] No historical task file was rewritten to add metadata
 - [ ] No vague formulations, no tasks mixing responsibilities
 - [ ] DRY, YAGNI, TDD principles applied
 

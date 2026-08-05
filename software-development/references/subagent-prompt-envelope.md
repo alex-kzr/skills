@@ -25,19 +25,28 @@ Execution mode:
 Task:
 - Task ID:
 - Task title:
-- Expected scope:
+- Task type:
+- Depends on:
+- Allowed scope:
+- Out of scope:
+- Verification commands:
+- Maximum repair attempts:
 
 Rules:
 - Read required skills first.
 - Read the task file before editing.
-- Update task status and kanban status.
-- Validate before moving to Done.
-- Report changed files and validation commands.
+- Write only inside Allowed scope; never inside Out of scope.
+- Run every verification command from its declared working directory, one at a time.
+- Report each command with its working directory and exit code. Never report a command you did not run.
+- Do not verify your own work and do not tick acceptance-criteria checkboxes.
+- Terminal state is `implemented`: stop after reporting. The orchestrator dispatches verification and moves the board.
 
 Final report:
-- Status:
+- Status: implemented | blocked
 - Files changed:
 - Validation:
+- Acceptance criteria evidence:
+- Out-of-scope discoveries:
 - Blockers:
 ```
 
@@ -55,8 +64,28 @@ Final report:
   `separate` (this task only), `parallel` (this task runs alongside sibling tasks in their own
   sessions), `same-session` (pull in the listed IDs and run sequentially), or `whole-phase`
   (pull in every task of the phase).
-- **Expected scope** — a short boundary statement (files/modules expected to change) so the
-  subagent can flag out-of-scope discoveries instead of silently expanding the task.
+- **Task type / Depends on / Allowed scope / Out of scope / Verification commands / Maximum
+  repair attempts** — copied verbatim from the task file's `## Execution Metadata` block (see
+  [writing-plans → Task Metadata](../writing-plans/SKILL.md#task-metadata-machine-readable)).
+  Copy them rather than pointing at the file: a fresh subagent must not have to infer its own
+  boundary. When the task file has no metadata block, fill `Allowed scope` from
+  `## Affected Files / Components`, `Depends on` from board position, and say `none declared`
+  for the rest — do not invent verification commands.
+- **Allowed scope** — the boundary that turns an out-of-scope discovery into a report instead of
+  a silent expansion of the task.
+- **Verification ownership** — the subagent runs the commands as part of implementing; it does
+  **not** decide whether the task passed. `implemented` is its terminal state, and an
+  independent verifier with fresh context produces the verdict. This is why the envelope's rules
+  forbid ticking acceptance-criteria checkboxes and moving the card to Done.
+- **Acceptance criteria evidence** — one line per `AC-n` stating what in the diff or command
+  output addresses it. Evidence, not a self-assessed pass.
+- **Out-of-scope discoveries** — anything the subagent found that needed a change outside
+  `Allowed scope`. Reported, never performed.
+- **Role and report contracts** — in a project that publishes its own, those govern the dispatch
+  and the shape of the Final report. In oxidium-forge they are
+  `.agents/skills/project-skills/oxidium-forge/feature-pipeline/roles/README.md` and
+  `.agents/skills/project-skills/oxidium-forge/feature-pipeline/reports/README.md`. This envelope
+  stays the generic shape; it does not restate them.
 
 ## Why a Fixed Envelope
 
@@ -84,18 +113,30 @@ Execution mode:
 Task:
 - Task ID: TP-02
 - Task title: Scope tenant queries
-- Expected scope: src/db/queries.rs only
+- Task type: rust
+- Depends on: TP-01
+- Allowed scope: apps/oxidium-forge-core/crates/forge-store/src/queries.rs
+- Out of scope: apps/oxidium-forge-ui/**, docs/**
+- Verification commands:
+  - apps/oxidium-forge-core -> cargo fmt --check
+  - apps/oxidium-forge-core -> cargo clippy --all-targets --all-features -- -D warnings
+  - apps/oxidium-forge-core -> cargo test --all
+- Maximum repair attempts: 2
 
 Rules:
 - Read required skills first.
 - Read the task file before editing.
-- Update task status and kanban status.
-- Validate before moving to Done.
-- Report changed files and validation commands.
+- Write only inside Allowed scope; never inside Out of scope.
+- Run every verification command from its declared working directory, one at a time.
+- Report each command with its working directory and exit code. Never report a command you did not run.
+- Do not verify your own work and do not tick acceptance-criteria checkboxes.
+- Terminal state is `implemented`: stop after reporting. The orchestrator dispatches verification and moves the board.
 
 Final report:
-- Status:
+- Status: implemented | blocked
 - Files changed:
 - Validation:
+- Acceptance criteria evidence:
+- Out-of-scope discoveries:
 - Blockers:
 ```
