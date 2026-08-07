@@ -225,6 +225,11 @@ Always use **relative links**, never absolute paths. Link targets depend on what
 
 Apply this rule when writing new SKILL.md files and when updating existing ones.
 
+When editing any skill file, write links to files inside the same repository
+as clickable relative Markdown links in the form `[document-name](relative/path)`
+so readers can navigate to them. Do not leave repository file references as
+absolute paths or plain text when they can be linked.
+
 ### Step 5: Validate the Skill
 
 Once development of the skill is complete, validate the skill folder to catch basic issues early:

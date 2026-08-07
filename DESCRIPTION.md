@@ -10,7 +10,7 @@ Root catalog of all agent skills.
 
 | Type | Path                                                                 | Description | When to open |
 |---|----------------------------------------------------------------------|---|---|
-| Skill | [skill-update/](skill-update/SKILL.md)                               | Guide for creating or updating agent skills — naming, structure, progressive disclosure, validation, and iteration. | Open when the user wants to create a new skill or improve an existing one. |
+| Skill | [skill-update/](skill-update/SKILL.md)                               | Guide for creating or updating agent skills — naming, structure, relative links, progressive disclosure, validation, and iteration. | Open when the user wants to create a new skill or improve an existing one. |
 | Skill | [skill-navigator/](skill-navigator/SKILL.md)                         | Browse and locate skills in the catalog by navigating DESCRIPTION.md files top-down through the skill tree. | Open when looking for an existing skill for a task or exploring what skills are available. |
 | Skill | [skill-graphify/](skill-graphify/SKILL.md)                           | Build and query a knowledge graph of the skills library for intelligent skill discovery, domain classification, and metadata validation. | Open when searching for relevant skills via graph queries, or after adding/renaming/deleting skills to rebuild the index. |
 | Catalog | [projects-skills/](project-skills/DESCRIPTION.md)                    | Project-specific skills grouped by project code. | Open when the task is related to a known project, repository, product, or project code. |
