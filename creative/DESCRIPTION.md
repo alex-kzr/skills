@@ -22,6 +22,7 @@ Creative content generation — ASCII art, hand-drawn style diagrams, visual des
 | Skill | [manim-video/](manim-video/SKILL.md) | Manim CE animations: 3Blue1Brown math/algo videos. | Open when creating mathematical or algorithm animation videos. |
 | Skill | [p5js/](p5js/SKILL.md) | p5.js sketches: gen art, shaders, interactive, 3D. | Open when creating generative art or interactive sketches with p5.js. |
 | Skill | [pixel-art/](pixel-art/SKILL.md) | Pixel art w/ era palettes (NES, Game Boy, PICO-8). | Open when creating pixel art with retro color palettes. |
+| Skill | [pretext/](pretext/SKILL.md) | DOM-free text measurement and layout for creative browser demos, kinetic typography, text-flow art, and text-based games. | Open when building creative browser experiences whose geometry depends on measured multiline text. |
 | Skill | [popular-web-designs/](popular-web-designs/SKILL.md) | 54 real design systems (Stripe, Linear, Vercel) as HTML/CSS. | Open when implementing a specific popular web design system. |
 | Skill | [songwriting-and-ai-music/](songwriting-and-ai-music/SKILL.md) | Songwriting craft and Suno AI music prompts. | Open when writing song lyrics or creating Suno AI music prompts. |
 | Skill | [touchdesigner-mcp/](touchdesigner-mcp/SKILL.md) | Control a running TouchDesigner instance via twozero MCP — create operators, set parameters, build real-time visuals. | Open when building real-time visuals with TouchDesigner. |
