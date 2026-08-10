@@ -1,7 +1,7 @@
 ---
 name: claude-code
 description: "Delegate coding to Claude Code CLI (features, PRs)."
-version: 2.2.0
+version: 2.2.1
 author: Hermes Agent + Teknium
 license: MIT
 platforms: [linux, macos, windows]
@@ -18,7 +18,8 @@ Delegate coding tasks to [Claude Code](https://code.claude.com/docs/en/cli-refer
 ## Prerequisites
 
 - **Install:** `npm install -g @anthropic-ai/claude-code`
-- **Auth:** set `ANTHROPIC_API_KEY` env var, or run `claude auth login` (browser OAuth for Pro/Max)
+- **Auth:** run `claude` once to log in (browser OAuth for Pro/Max, or set `ANTHROPIC_API_KEY`)
+- **Console auth:** `claude auth login --console` for API key billing
 - **SSO auth:** `claude auth login --sso` for Enterprise
 - **Check status:** `claude auth status` (JSON) or `claude auth status --text` (human-readable)
 - **Health check:** `claude doctor` — checks auto-updater and installation health
@@ -81,7 +82,7 @@ claude "Initial prompt"   # REPL с начальным промптом
 | `🚫 --bare` | **BANNED — do not use.** Use `--effort low` + `--allowedTools` instead |
 | `--continue` / `--resume <id>` | Продолжить сессию |
 | `--model sonnet/opus/haiku` | Выбор модели |
-| `--effort low/medium/high/max` | Глубина рассуждений |
+| `--effort low/medium/high/xhigh/max` | Глубина рассуждений |
 
 ## Two Orchestration Modes
 
@@ -334,7 +335,7 @@ Automatically falls back to the specified model when the default is overloaded (
 | Flag | Effect |
 |------|--------|
 | `--model <alias>` | Model selection: `sonnet`, `opus`, `haiku`, or full name like `claude-sonnet-4-6` |
-| `--effort <level>` | Reasoning depth: `low`, `medium`, `high`, `max`, `auto` | Both |
+| `--effort <level>` | Reasoning depth: `low`, `medium`, `high`, `xhigh`, `max`, `auto` | Both |
 | `--max-turns <n>` | Limit agentic loops (print mode only; prevents runaway) |
 | `--max-budget-usd <n>` | Cap API spend in dollars (print mode only) |
 | `--fallback-model <model>` | Auto-fallback when default model is overloaded (print mode only) |
@@ -458,7 +459,7 @@ Use the `#` prefix in interactive mode to quickly add to memory: `# Always use 2
 | Command | Purpose |
 |---------|---------|
 | `/model [model]` | Switch models mid-session (use arrow keys to adjust effort) |
-| `/effort [level]` | Set reasoning effort: `low`, `medium`, `high`, `max`, or `auto` |
+| `/effort [level]` | Set reasoning effort: `low`, `medium`, `high`, `xhigh`, `max`, or `auto` |
 | `/init` | Create a CLAUDE.md file for project memory |
 | `/memory` | Open CLAUDE.md for editing |
 | `/config` | Open interactive settings configuration |
@@ -765,7 +766,7 @@ Use `/context` in interactive mode to see a colored grid of context usage. Key t
 | Variable | Effect |
 |----------|--------|
 | `ANTHROPIC_API_KEY` | API key for authentication (alternative to OAuth) |
-| `CLAUDE_CODE_EFFORT_LEVEL` | Default effort: `low`, `medium`, `high`, `max`, or `auto` |
+| `CLAUDE_CODE_EFFORT_LEVEL` | Default effort: `low`, `medium`, `high`, `xhigh`, `max`, or `auto` |
 | `MAX_THINKING_TOKENS` | Cap thinking tokens (set to `0` to disable thinking entirely) |
 | `MAX_MCP_OUTPUT_TOKENS` | Cap output from MCP servers (default varies; set e.g., `50000`) |
 | `CLAUDE_CODE_NO_FLICKER=1` | Enable alt-screen rendering to eliminate terminal flicker |
