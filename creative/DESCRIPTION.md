@@ -12,6 +12,7 @@ Creative content generation — ASCII art, hand-drawn style diagrams, visual des
 |---|---|---|---|
 | Skill | [architecture-diagram/](architecture-diagram/SKILL.md) | Dark-themed SVG architecture/cloud/infra diagrams as HTML. | Open when creating architecture or infrastructure diagrams. |
 | Skill | [ascii-media/](ascii-media/SKILL.md) | ASCII art and video: static banners, image-to-ASCII, and full ASCII video production pipeline. | Open when producing ASCII art or ASCII video. |
+| Skill | [baoyu-visual-content/](baoyu-visual-content/SKILL.md) | Generate Chinese-language visual content: infographics (信息图, 21 layouts × 21 styles) and knowledge comics (知识漫画, educational/biography/tutorial). | Open when generating Chinese-language infographics or knowledge comics. |
 | Skill | [claude-design/](claude-design/SKILL.md) | Design one-off HTML artifacts (landing, deck, prototype); Sketch Mode for rapid design variants; Pretext Mode for DOM-free text layout demos. | Open when creating single-file HTML landing pages, prototypes, or creative browser demos. |
 | Skill | [comfyui/](comfyui/SKILL.md) | Generate images, video, and audio with ComfyUI workflows. | Open when using ComfyUI for image/video/audio generation. |
 | Skill | [creative-ideation/](creative-ideation/SKILL.md) | Generate project ideas via creative constraints. | Open when brainstorming creative project ideas. |

@@ -1,7 +1,6 @@
 ---
 name: baoyu-visual-content
 description: "Generate Chinese-language visual content: infographics (信息图, 21 layouts × 21 styles) and knowledge comics (知识漫画, educational/biography/tutorial)."
-version: 1.0.0
 metadata:
   hermes:
     tags: [infographic, comic, visual, Chinese, 信息图, 知识漫画, baoyu, visualization]
