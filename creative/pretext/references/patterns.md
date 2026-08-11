@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
 # Pretext Patterns
 
 Copy-pasteable snippets for the most common pretext demo shapes. Each pattern is self-contained — drop into an HTML `<script type="module">` after importing from `https://esm.sh/@chenglou/pretext@0.0.6`.
@@ -81,10 +78,6 @@ walkLineRanges(prepared, COL_W, (line) => {
     const w = ctx.measureText(segment).width;
     particles.push({ ch: segment, x, y, vx: 0, vy: 0, homeX: x, homeY: y });
     x += w;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
   }
   y += LINE_H;
 });
@@ -165,10 +158,6 @@ const rowMax = new Float32Array(rows).fill(-Infinity);
 for (const cell of visibleCells) {
   rowMin[cell.row] = Math.min(rowMin[cell.row], cell.x);
   rowMax[cell.row] = Math.max(rowMax[cell.row], cell.x + CELL_W);
-
-Exit code: 0
-Wall time: 0.4 seconds
-Output:
 }
 
 for (let row = 0; row < rows; row++) {
@@ -249,10 +238,6 @@ function frame(t) {
     const y = 100 + i * 40 + Math.sin(phase) * 12;
     const opacity = 0.4 + 0.6 * Math.max(0, Math.sin(phase));
     ctx.globalAlpha = opacity;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
     ctx.fillText(lines[i].text, 40, y);
   }
 }

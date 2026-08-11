@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
 <!doctype html>
 <html lang="en">
 <head>
@@ -121,10 +118,6 @@ Output:
   .noise {
     z-index: 101;
     mix-blend-mode: difference;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
   }
   #noiseCanvas {
     width: 100%;
@@ -245,10 +238,6 @@ const CODE_CHUNK = SELF_LEARNING_SOURCE
   .replace(/\t/g, "  ")
   .replace(/\n{3,}/g, "\n\n");
 const STREAM_REPEAT_COUNT = 6;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
 const streamCorpus = Array.from({ length: STREAM_REPEAT_COUNT }, () => CODE_CHUNK).join("\n\n");
 
 const stage = document.getElementById("stage");
@@ -369,10 +358,6 @@ addEventListener("keydown", e => {
 let asciiMask, asciiChar, asciiGlyph, orbMask, orbChar, orbGlyph, obstacleRows, intervals;
 let cols = 0, rows = 0;
 let canvasCols = 0, canvasRows = 0;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
 let lastFrameTime = 0;
 const drawnLines = { x: [], y: [], w: [], text: [], count: 0 };
 let lineNodes = [];
@@ -493,10 +478,6 @@ function startSceneTimeline() {
       onComplete: () => {
         armNous(sceneTimeNow() + Math.max(0, ctrls.nousAfterWire));
       },
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
     });
 }
 
@@ -617,10 +598,6 @@ stage.addEventListener("dblclick", e => {
 });
 
 function rasterizeNOUS(time) {
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
   asciiMask.fill(0);
   asciiGlyph.fill("");
   for (const r of obstacleRows) r.length = 0;
@@ -741,10 +718,6 @@ function mergeObstacleRows() {
       const last = spans[w], cur = spans[i];
       if (cur[0] <= last[1] + CELL_W * 3.1) last[1] = Math.max(last[1], cur[1]);
       else spans[++w] = cur;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
     }
     spans.length = w + 1;
   }
@@ -865,10 +838,6 @@ function collectSphereObstacleRows(center, radiusNorm, obstacleScale, rPad) {
 }
 function pushMorphedObstacleRows(sphereRows, cubeRows, mix) {
   const centerX = W * (0.5 + ORB.panX);
-
-Exit code: 0
-Wall time: 1.2 seconds
-Output:
   for (let row = 0; row < rows; row++) {
     const sphereValid = Number.isFinite(sphereRows[row].left);
     const cubeValid = Number.isFinite(cubeRows[row].left);
@@ -989,10 +958,6 @@ function rasterizeOrb(time) {
       const depth = (pz / radiusNorm) * 0.5 + 0.5;
 
       let sx = px / radiusNorm, sy = py / radiusNorm, sz = pz / radiusNorm;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
       let a = rot(sy, sz, sphereOrbitX); sy = a[0]; sz = a[1];
       a = rot(sx, sz, sphereOrbitY); sx = a[0]; sz = a[1];
 
@@ -1113,10 +1078,6 @@ function highlightSource(text) {
           : /^[A-Z_]{2,}$/.test(value)
             ? "tok-const"
             : "tok-keyword";
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
     out += `<span class="${cls}">${escapeHTML(value)}</span>`;
     last = match.index + value.length;
   }
@@ -1237,10 +1198,6 @@ const ctrls = {
   orbSpaceStart: 0.82,
   orbSpaceDuration: 0.7,
   orbSpaceEase: 1.1,
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
   orbWireLow: 0.01,
   wireDropDuration: 1.2,
   orbFadeDuration: 0.85,
@@ -1361,10 +1318,6 @@ function initNoise() {
     varying vec2 vUv;
     void main() {
       vUv = aPos * 0.5 + 0.5;
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
       gl_Position = vec4(aPos, 0.0, 1.0);
     }
   `;
@@ -1485,10 +1438,6 @@ function draw(time) {
   for (let r = 0; r < canvasRows; r++) {
     const base = r * canvasCols;
     for (let c = 0; c < canvasCols; c++) {
-
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
       const idx = base + c;
       if (orbMask[idx] === EMPTY) continue;
       orbCtx.fillText(orbGlyph[idx] || CHARS[orbChar[idx]], c * CELL_W + CELL_W * 0.5, r * CELL_H + CELL_H * 0.5);
