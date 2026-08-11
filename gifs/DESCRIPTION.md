@@ -8,4 +8,5 @@ Skills for searching, downloading, and working with GIFs and short-form animated
 
 ## Contents
 
-_(No skills registered yet.)_
+| Type | Path | Description | When to open |
+|---|---|---|---|

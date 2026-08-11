@@ -4,8 +4,9 @@ description: Vector similarity search and embedding databases for RAG, semantic 
 
 # Vector Databases
 
-Vector similarity search and embedding databases for RAG, semantic search, and AI application backends.
+Skills for vector similarity search and embedding databases.
 
 ## Contents
 
-_(No skills registered yet.)_
+| Type | Path | Description | When to open |
+|---|---|---|---|

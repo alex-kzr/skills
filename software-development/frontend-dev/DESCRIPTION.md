@@ -1,9 +1,15 @@
-# .agents/skills/frontend-dev
+---
+description: Frontend development skills for React, Tailwind CSS, and Vite.
+---
 
-Сводный список скилов на этом уровне (внутренние папки ниже этого уровня здесь не перечисляются).
+# Frontend Development
 
-| Тип | Ссылка | Описание |
-|---|---|---|
-| Категория | [react/](react/DESCRIPTION.md) | Скилы для разработки на React: компоненты, рендеринг JSON, управление состоянием, best practices от Vercel, view transitions. |
-| Категория | [tailwind/](tailwind/DESCRIPTION.md) | Скилы для работы с Tailwind CSS: браузерный рантайм v4, дизайн-системы, токены. |
-| Скил | [vite/](vite/SKILL.md) | Vite build tool configuration, plugin API, SSR, and Vite 8 Rolldown migration. Use when working with Vite projects, vite.config.ts, Vite plugins, or building libraries/SSR apps with Vite. |
+Skills for building and reviewing frontend applications.
+
+## Contents
+
+| Type | Path | Description | When to open |
+|---|---|---|---|
+| Catalog | [react/](react/DESCRIPTION.md) | React, Next.js, React Router, React Native, and related frontend practices. | Open when building, reviewing, or upgrading a React-based application. |
+| Catalog | [tailwind/](tailwind/DESCRIPTION.md) | Tailwind CSS runtime patterns and design-system guidance. | Open when working with Tailwind CSS or a Tailwind-based design system. |
+| Skill | [vite/](vite/SKILL.md) | Configure Vite, plugins, SSR, and the Vite 8 Rolldown migration. | Open when working on a Vite project, configuration, plugin, library, or SSR build. |

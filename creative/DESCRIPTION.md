@@ -11,7 +11,10 @@ Creative content generation — ASCII art, hand-drawn style diagrams, visual des
 | Type | Path | Description | When to open |
 |---|---|---|---|
 | Skill | [architecture-diagram/](architecture-diagram/SKILL.md) | Dark-themed SVG architecture/cloud/infra diagrams as HTML. | Open when creating architecture or infrastructure diagrams. |
+| Skill | [ascii-art/](ascii-art/SKILL.md) | Create text banners and image-to-ASCII art with terminal tools. | Open when making ASCII art, figlet banners, or text-art graphics. |
 | Skill | [ascii-media/](ascii-media/SKILL.md) | ASCII art and video: static banners, image-to-ASCII, and full ASCII video production pipeline. | Open when producing ASCII art or ASCII video. |
+| Skill | [ascii-video/](ascii-video/SKILL.md) | Convert video or audio into colored ASCII MP4 or GIF output. | Open when creating ASCII video or animated GIFs. |
+| Skill | [baoyu-infographic/](baoyu-infographic/SKILL.md) | Create infographics using a choice of layouts and visual styles. | Open when producing an infographic or visual summary. |
 | Skill | [baoyu-visual-content/](baoyu-visual-content/SKILL.md) | Generate Chinese-language visual content: infographics (信息图, 21 layouts × 21 styles) and knowledge comics (知识漫画, educational/biography/tutorial). | Open when generating Chinese-language infographics or knowledge comics. |
 | Skill | [claude-design/](claude-design/SKILL.md) | Design one-off HTML artifacts (landing, deck, prototype); Sketch Mode for rapid design variants; Pretext Mode for DOM-free text layout demos. | Open when creating single-file HTML landing pages, prototypes, or creative browser demos. |
 | Skill | [comfyui/](comfyui/SKILL.md) | Generate images, video, and audio with ComfyUI workflows. | Open when using ComfyUI for image/video/audio generation. |
@@ -25,4 +28,5 @@ Creative content generation — ASCII art, hand-drawn style diagrams, visual des
 | Skill | [pretext/](pretext/SKILL.md) | DOM-free text measurement and layout for creative browser demos, kinetic typography, text-flow art, and text-based games. | Open when building creative browser experiences whose geometry depends on measured multiline text. |
 | Skill | [popular-web-designs/](popular-web-designs/SKILL.md) | 54 real design systems (Stripe, Linear, Vercel) as HTML/CSS. | Open when implementing a specific popular web design system. |
 | Skill | [songwriting-and-ai-music/](songwriting-and-ai-music/SKILL.md) | Songwriting craft and Suno AI music prompts. | Open when writing song lyrics or creating Suno AI music prompts. |
+| Skill | [sketch/](sketch/SKILL.md) | Create several throwaway HTML mockup variants for comparison. | Open when rapidly exploring UI, wireframe, or prototype directions. |
 | Skill | [touchdesigner-mcp/](touchdesigner-mcp/SKILL.md) | Control a running TouchDesigner instance via twozero MCP — create operators, set parameters, build real-time visuals. | Open when building real-time visuals with TouchDesigner. |
