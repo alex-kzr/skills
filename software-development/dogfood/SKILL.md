@@ -1,9 +1,9 @@
 ---
 name: dogfood
 description: "Exploratory QA of web apps: find bugs, evidence, reports."
-version: 1.0.0
-platforms: [linux, macos, windows]
 metadata:
+  version: 1.0.0
+  platforms: [linux, macos, windows]
   hermes:
     tags: [qa, testing, browser, web, dogfood]
     related_skills: []
@@ -104,7 +104,7 @@ For every issue found:
    - Console errors (if any)
    - Screenshot path
 
-3. **Classify the issue** using the issue taxonomy (see `references/issue-taxonomy.md`):
+3. **Classify the issue** using the [issue taxonomy](references/issue-taxonomy.md):
    - Severity: Critical / High / Medium / Low
    - Category: Functional / Visual / Accessibility / Console / UX / Content
 
@@ -118,7 +118,7 @@ For every issue found:
 
 ### Phase 5: Report
 
-Generate the final report using the template at `templates/dogfood-report-template.md`.
+Generate the final report using the [report template](templates/dogfood-report-template.md).
 
 The report must include:
 1. **Executive summary** with total issue count, breakdown by severity, and testing scope
