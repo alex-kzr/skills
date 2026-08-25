@@ -11,3 +11,4 @@ Skills for backend development across languages and frameworks.
 | Type | Path | Description | When to open |
 |---|---|---|---|
 | Catalog | [rust/](rust/DESCRIPTION.md) | Rust backend development skills — language-specific patterns, frameworks, tooling, and specialized workflows. | Open when working on Rust backend code, reviewing Rust implementation details, or choosing a Rust-specific skill. |
+| Catalog | [python/](python/DESCRIPTION.md) | Python backend development skills — focused guidance for implementation, frameworks, async work, testing, security, and tooling. | Open when working on Python backend code or selecting a Python-specific skill. |
