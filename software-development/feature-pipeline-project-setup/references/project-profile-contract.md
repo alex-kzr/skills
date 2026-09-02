@@ -19,6 +19,7 @@ specifics.
 - [Ignore rule and tracked/generated split](#ignore-rule-and-trackedgenerated-split)
 - [Setup report shape](#setup-report-shape)
 - [Error contract](#error-contract)
+- [Validator findings](#validator-findings)
 - [Out of scope](#out-of-scope)
 
 ## Terms and anchors
@@ -283,6 +284,45 @@ The report records what actually ran, not what was intended.
 
 Every stop is fail-closed: no partial project configuration is left behind
 beyond files already written in the same run, which the report lists.
+
+## Validator findings
+
+`scripts/validate_project_setup.py` reads a generated setup and reports every
+contract violation as a `{ "code": ..., "detail": ... }` finding. It never
+mutates the target tree (`run_validation` snapshots before and after and raises
+if anything changed) and never runs the Graphify wrapper. Exit status: `0` when
+`findings` is empty, `1` when any finding is present, `2` for a bad invocation
+(a missing `--project-root` / `--agents-root` / `--core-root`, a project root
+that is not a directory or not inside a Git work tree, or a missing `git`).
+
+The codes are stable identifiers; tests pin one code per single injected defect.
+
+| Code | Raised when |
+|---|---|
+| `E_STRUCTURE` | A required file is absent: `pipeline.profile.json`, `integrations.json`, `tools/feature-pipeline/README.md`, or (Graphify) `tools/graphify/.graphifyignore` / `tools/graphify/config/graphify.project.json`. |
+| `E_JSON_SYNTAX` | A generated JSON file does not parse. |
+| `E_SCHEMA` | Wrong `schema_version`, a missing/mistyped key, or an inline `checks` array in `pipeline.profile.json`. |
+| `E_TASK_TYPE` | A `task_routing[].task_type` is not one of the approved task types. |
+| `E_ROLE_GRANTS` | `roles` is empty, a role has no name, or a role's `min_grants` is not a non-empty list of grant names. |
+| `E_PATH_BACKSLASH` | A configured path uses `\` separators. |
+| `E_PATH_ABSOLUTE` | A configured path is absolute, drive-qualified, or starts with `/` or `~`. |
+| `E_PATH_ESCAPE` | A configured path contains a `..` segment. |
+| `E_ARGV_TYPE` | A `checks.json` `argv` is not a non-empty list of non-empty strings. |
+| `E_ARGV_SHELL` | A `checks.json` `argv` token contains a shell operator (`|`, `&&`, `;`, `>`, `<`, `` ` ``, `$(`). |
+| `E_RUN_STATE_PLACEMENT` | `run_state_path` names the repo root / `tools`, or sits inside `tools/graphify/graphify-out/` or inside the portable core. |
+| `E_ANCHOR_MISMATCH` | `pipeline.profile.json` `anchors.agents_root` / `anchors.core_root` does not match the anchor passed on the command line. |
+| `E_GRAPHIFY_WORKSPACE` | `integrations.json` `graphify.workspace` is not `tools/graphify`. |
+| `E_GRAPHIFY_WRAPPER_MISSING` | `graphify.wrapper_dir` is outside `tools/graphify/`, or the directory does not exist or holds no files. |
+| `E_GRAPHIFY_OUTPUTS` | `graphify.expected_outputs` is not exactly the five required outputs in the required order (extra entries, including `graph.html`, or a missing entry). |
+| `E_GRAPHIFY_DIFF_POLICY` | `graphify.diff_policy` is not `tracked-empty`. |
+| `E_GRAPHIFY_FORBIDDEN` | `graphify.forbidden` is not exactly the three-command installer denylist. |
+| `E_GITIGNORE_MISSING_RULE` | The root `.gitignore` does not contain the exact line `/tools/graphify/graphify-out/`. |
+| `E_GITIGNORE_BROAD_RULE` | The root `.gitignore` contains a rule that ignores all of `tools/graphify/` (e.g. `/tools/graphify/`, `tools/graphify/**`). |
+| `E_GIT_TRACKED_OUTPUT` | `git ls-files` reports a tracked file under `tools/graphify/graphify-out/`. |
+| `E_GIT_CONFIG_IGNORED` | `git check-ignore --no-index` reports that a tracked configuration or wrapper file would be ignored. Suppressed for `tools/graphify/**` when `E_GITIGNORE_BROAD_RULE` already covers it. |
+
+`graph.html` is never required and its presence under `tools/graphify/graphify-out/`
+(untracked) is not a finding.
 
 ## Out of scope
 

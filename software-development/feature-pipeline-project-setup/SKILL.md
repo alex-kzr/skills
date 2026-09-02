@@ -115,5 +115,36 @@ absolute/escaping path, `\` separator, shell-form `argv`, unapproved task type,
 unresolved Graphify wrapper, target outside `tools/**`) stops the run before any
 file is created. Check commands are always split into `config/checks.json` when
 present, so `pipeline.profile.json` never also carries an inline `checks` array.
-`scripts/test_project_setup.py` holds the fixture-based tests (run them with the
-shared runtime's `python -m unittest`).
+`scripts/test_project_setup.py` holds the fixture-based tests for both the
+generator and the validator (run them with the shared runtime's
+`python -m unittest`).
+
+## Validator
+
+`scripts/validate_project_setup.py` is a **read-only, fail-closed** check that a
+generated setup conforms to both the portable profile schema and the
+project-local Graphify policy. It only reads files and runs read-only Git
+plumbing (`git rev-parse`, `git ls-files`, `git check-ignore`); it never
+repairs, normalizes, or creates anything, never runs the wrapper, and never
+requires `graph.html`. A failure is *evidence of a generator defect*, not
+something to patch in project output.
+
+```
+python scripts/validate_project_setup.py --project-root <target repo> \
+    --agents-root <agents checkout> --core-root <feature-pipeline-skill>
+python scripts/validate_project_setup.py --self-test
+```
+
+It validates directory structure, JSON syntax and schema, known task types,
+anchor-relative non-escaping paths, shell-free check `argv`, role/grant shape,
+run-state placement, and — when Graphify is enabled — `workspace: tools/graphify`,
+an existing non-empty wrapper directory, exactly the five required
+`expected_outputs` in order, `diff_policy: tracked-empty`, the complete installer
+denylist, the narrow `/tools/graphify/graphify-out/` ignore rule (rejecting any
+rule that hides all of `tools/graphify/`), no Git-tracked file under
+`tools/graphify/graphify-out/`, and that tracked configuration and wrappers are
+not Git-ignored. It prints a JSON report and exits `0` when valid, `1` on any
+finding, `2` on a bad invocation (missing anchor, not a Git work tree). `--self-test`
+builds its fixture only in a temporary directory and proves both the passing and
+failing paths leave the tree byte-identical. Stable finding codes are listed in
+[references/project-profile-contract.md](references/project-profile-contract.md).
