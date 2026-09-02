@@ -148,3 +148,36 @@ finding, `2` on a bad invocation (missing anchor, not a Git work tree). `--self-
 builds its fixture only in a temporary directory and proves both the passing and
 failing paths leave the tree byte-identical. Stable finding codes are listed in
 [references/project-profile-contract.md](references/project-profile-contract.md).
+
+## Smoke harness
+
+`scripts/smoke_project_setup.py` proves the generated setup can drive the
+portable core's **safe planning path** end to end, without a live project and
+without any delivery side effect. In one fresh temporary directory it builds a
+complete minimal fixture (its own Git work tree, a stub core tree, an approved
+wrapper source), applies `setup_project.py`, runs `validate_project_setup.py`
+read-only over the result, derives a portable-core `profile.json` + `plan.json`
+**from the generated `pipeline.profile.json` / `checks.json`** (task types,
+working roots, check `argv`, role grants, run-state location — all straight from
+setup output), then invokes the explicitly located core CLI exactly twice:
+`--help` (exit `0`) and one `--mode plan-only --dry-run` scenario (exit `10`, a
+delivery gate pending).
+
+```
+python scripts/smoke_project_setup.py --self-test \
+    --core-root <feature-pipeline checkout> [--agents-root <agents checkout>]
+```
+
+Both roots are explicit and never inferred from a home directory. Every
+subprocess argv is a shell-free list checked *before* launch; an argv carrying a
+Graphify installer, `commit`, or `push` raises before any process starts, and
+the harness never runs the Graphify wrapper or Graphify itself. It snapshots
+every path outside the temporary directory it can reach (the core checkout, and
+an external `--agents-root`) and fails if a byte changes. `--self-test` runs the
+whole flow twice from independent temporary directories and exits `0` only when
+the redacted, timing-free reports are byte-identical, the exit contract held,
+Graphify was not executed, and nothing outside the temp dir moved; `1` on any
+smoke-contract failure; `2` when the core cannot be resolved or does not expose
+`plan-only --dry-run`. `scripts/test_project_setup.py` holds its tests
+(argv guard, generated-input translation, successful smoke, core non-zero exit,
+out-of-fixture mutation detection, nondeterministic-report detection).

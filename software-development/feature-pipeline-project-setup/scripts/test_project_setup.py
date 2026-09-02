@@ -589,5 +589,137 @@ class ValidatorTestCase(unittest.TestCase):
         self._assert_single("E_GIT_CONFIG_IGNORED")
 
 
+import smoke_project_setup as smoke
+
+#: The sibling portable-core skill checkout, located relative to this test file
+#: (never inferred from a home directory). Smoke integration cases skip when it
+#: or its CLI is not present.
+_CORE_ROOT = Path(__file__).resolve().parents[2] / "feature-pipeline"
+_HAVE_CORE = (_CORE_ROOT / "scripts" / "run_pipeline.py").is_file()
+
+
+class SmokeArgvGuardTestCase(unittest.TestCase):
+    """Unit coverage for the pre-launch argv guard and report comparison."""
+
+    def test_forbidden_argv_rejected_before_launch(self) -> None:
+        for argv in (
+            ["git", "commit", "-m", "x"],
+            ["git", "push", "origin", "main"],
+            ["python", "run_pipeline.py", "--push"],
+            ["python", "run_pipeline.py", "--commit"],
+            ["python", "run_pipeline.py", "--commit-approved-manifest"],
+            ["graphify", "claude", "install"],
+            ["graphify", "codex", "install"],
+        ):
+            with self.assertRaises(smoke.SmokeError, msg=argv):
+                smoke.assert_argv_allowed(argv)
+
+    def test_allowed_argv_passes(self) -> None:
+        for argv in (
+            ["git", "init", "-q"],
+            ["git", "add", "-A"],
+            ["python", "run_pipeline.py", "--help"],
+            ["python", "run_pipeline.py", "--mode", "plan-only", "--dry-run"],
+        ):
+            smoke.assert_argv_allowed(argv)  # must not raise
+
+    def test_reports_match_detects_difference(self) -> None:
+        self.assertTrue(smoke.reports_match({"a": 1, "b": [1, 2]}, {"b": [1, 2], "a": 1}))
+        self.assertFalse(smoke.reports_match({"a": 1}, {"a": 2}))
+
+    def test_build_core_inputs_consumes_generated_setup(self) -> None:
+        generated_profile = {
+            "project": "demo",
+            "anchors": {"agents_root": ".agents", "core_root": "feature-pipeline-skill"},
+            "task_routing": [
+                {"task_type": "tooling", "working_root": "tools"},
+                {"task_type": "docs", "working_root": "docs"},
+            ],
+            "run_state_path": "tools/feature-pipeline/state",
+            "roles": [{"role": "executor", "min_grants": ["read", "write"]}],
+        }
+        generated_checks = {
+            "checks": [
+                {"stack": "python", "name": "unit", "argv": ["uv", "run", "pytest"], "cwd": "."}
+            ]
+        }
+        profile, plan = smoke.build_core_inputs(generated_profile, generated_checks)
+
+        self.assertEqual(profile["version"], 1)
+        self.assertEqual(profile["name"], "demo")
+        self.assertEqual(sorted(profile["registry"]["task_types"]), ["docs", "tooling"])
+        self.assertEqual(profile["registry"]["roots"], {"tooling": "tools", "docs": "docs"})
+        self.assertEqual(profile["registry"]["checks"], {"unit": ["uv", "run", "pytest"]})
+        self.assertEqual(
+            profile["registry"]["storage"], {"run_state": "tools/feature-pipeline/state"}
+        )
+        self.assertEqual([t["type"] for t in plan["tasks"]], ["tooling", "docs"])
+        self.assertEqual(plan["tasks"][1]["depends_on"], ["SM-01"])
+
+    def test_build_core_inputs_rejects_empty_routing(self) -> None:
+        with self.assertRaises(smoke.SmokeError):
+            smoke.build_core_inputs(
+                {"project": "x", "anchors": {"agents_root": "a", "core_root": "c"},
+                 "task_routing": [], "run_state_path": "s", "roles": []},
+                None,
+            )
+
+
+@unittest.skipUnless(_HAVE_CORE, "portable core checkout not present next to the skill")
+class SmokeHarnessTestCase(unittest.TestCase):
+    """Integration coverage: the harness drives the real portable core CLI."""
+
+    def test_successful_smoke_self_test(self) -> None:
+        self.assertEqual(smoke.self_test(core_root=_CORE_ROOT), 0)
+
+    def test_capture_is_deterministic_and_touches_nothing_forbidden(self) -> None:
+        report = smoke.capture(core_root=_CORE_ROOT)
+        self.assertEqual(report["core"]["help"]["exit"], smoke.EXPECTED_HELP_EXIT)
+        self.assertEqual(report["core"]["dry_run"]["exit"], smoke.EXPECTED_DRY_RUN_EXIT)
+        self.assertTrue(report["exit_contract"]["satisfied"])
+        self.assertFalse(report["graphify_executed"])
+        self.assertTrue(report["outside_tmp_unchanged"])
+        self.assertEqual(report["validation"]["findings"], [])
+        for argv in report["launched_argv"]:
+            joined = " ".join(argv).lower()
+            self.assertNotIn("commit", joined)
+            self.assertNotIn("push", joined)
+            self.assertNotIn("install", joined)
+            self.assertNotIn("graphify", joined)
+        # The dry run is the core's only planning execution and it stayed a plan.
+        self.assertIn("dry run", report["core"]["dry_run"]["stdout"])
+        self.assertIn("C5. Exit code: 10", report["core"]["dry_run"]["stdout"])
+
+    def test_core_non_zero_exit_fails_the_smoke(self) -> None:
+        def tamper(profile: dict, plan: dict) -> "tuple[dict, dict]":
+            return profile, {**plan, "tasks": [{"id": "SM-01", "type": "not_a_real_type"}]}
+
+        with self.assertRaises(smoke.SmokeError) as ctx:
+            smoke.capture(core_root=_CORE_ROOT, _tamper=tamper)
+        self.assertIn("dry-run exit contract", str(ctx.exception))
+
+    def test_out_of_fixture_mutation_is_detected(self) -> None:
+        real = smoke.tree_hashes
+        seen: list[int] = []
+
+        def drifting(root: Path) -> "dict[str, str]":
+            seen.append(1)
+            # First call (the "before" snapshot) and every later call disagree.
+            return {"sentinel": str(len(seen))}
+
+        smoke.tree_hashes = drifting  # type: ignore[assignment]
+        try:
+            with self.assertRaises(smoke.SmokeError) as ctx:
+                smoke.capture(core_root=_CORE_ROOT)
+        finally:
+            smoke.tree_hashes = real  # type: ignore[assignment]
+        self.assertIn("outside its temp dir", str(ctx.exception))
+
+    def test_nondeterministic_report_is_detected(self) -> None:
+        self.assertEqual(
+            smoke.self_test(core_root=_CORE_ROOT, _nondeterministic=True), 1
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

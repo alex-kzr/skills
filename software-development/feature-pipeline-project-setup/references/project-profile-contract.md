@@ -20,6 +20,7 @@ specifics.
 - [Setup report shape](#setup-report-shape)
 - [Error contract](#error-contract)
 - [Validator findings](#validator-findings)
+- [Smoke harness](#smoke-harness)
 - [Out of scope](#out-of-scope)
 
 ## Terms and anchors
@@ -323,6 +324,52 @@ The codes are stable identifiers; tests pin one code per single injected defect.
 
 `graph.html` is never required and its presence under `tools/graphify/graphify-out/`
 (untracked) is not a finding.
+
+## Smoke harness
+
+`scripts/smoke_project_setup.py --self-test --core-root <checkout> [--agents-root <checkout>]`
+proves setup output can drive the portable core's safe planning path. It is not
+a Graphify build.
+
+Flow, entirely inside one `TemporaryDirectory`:
+
+1. Seed a minimal fixture project — its own Git work tree, a stub
+   `feature-pipeline-skill/pipeline_core/` tree, an approved wrapper source —
+   with every write beneath the temporary directory.
+2. Apply `setup_project.run_setup` (Graphify enabled), then run
+   `validate_project_setup.run_validation` read-only; any finding fails the smoke.
+3. Translate the generated `pipeline.profile.json` + `checks.json` into a
+   portable-core profile (`version`, `name`, `logical_paths`, `role_grants`, one
+   `implement` stage, and a `registry` whose `task_types` / `roots` / `checks` /
+   `storage` are the generated task routing, working roots, check `argv`, and
+   run-state path) plus a one-task-per-routed-type plan.
+4. Run the explicitly located core CLI exactly twice: `run_pipeline.py --help`
+   and `run_pipeline.py --project-root … --agents-root … --core-root … --profile
+   core.profile.json --plan core.plan.json --mode plan-only --dry-run`.
+
+Exit contract checked: `--help` → `0`; a non-blocked `plan-only --dry-run` → `10`
+(`EXIT_GATE_PENDING`, a delivery gate pending). Any other code fails the smoke.
+
+Safety:
+
+- `--core-root` and the optional `--agents-root` are always explicit; neither is
+  inferred from the working directory or a home directory.
+- Every subprocess argv is a shell-free list vetted before launch. An argv
+  containing a Graphify installer (`graphify … install`), `commit`, `push`, or
+  `tag` raises before any process starts.
+- The Graphify wrapper and `graphify` itself are never executed.
+- Every path outside the temporary directory the run can reach (the core
+  checkout, an external agents root) is hashed before and after; any change
+  fails the smoke.
+
+`--self-test` runs the whole flow twice from independent temporary directories
+and compares the redacted, timing-free reports (host paths → `<tmp>` /
+`<core_root>` / `<agents_root>` / `<home>`, the core's throwaway
+`pipeline-dry-run-*` directory name normalized). Exit: `0` when the two reports
+are byte-identical and the exit / Graphify / outside-tmp checks all held; `1` on
+any smoke-contract failure; `2` when the core cannot be resolved from
+`--core-root` or its `--help` does not expose `plan-only` and `--dry-run`
+(the blocking condition).
 
 ## Out of scope
 
