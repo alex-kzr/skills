@@ -98,3 +98,22 @@ produced but its absence is not an error. See the reference for the exact
 4. Write the project-local configuration, Graphify workspace, and ignore rule
    listed above — nothing outside `tools/` and the root `.gitignore`.
 5. Produce the setup report with the exact commands and their results.
+
+## Generator
+
+`scripts/setup_project.py` performs steps 3–5 deterministically and
+fail-closed. It validates the entire input before the first write, renders every
+file in memory, then writes only under `tools/**` and the root `.gitignore`:
+
+```
+python scripts/setup_project.py --input <input.json> \
+    --project-root <target repo> --report <repo-relative report path> --confirm
+```
+
+Without `--confirm` it refuses to write. Any contract violation (unknown key,
+absolute/escaping path, `\` separator, shell-form `argv`, unapproved task type,
+unresolved Graphify wrapper, target outside `tools/**`) stops the run before any
+file is created. Check commands are always split into `config/checks.json` when
+present, so `pipeline.profile.json` never also carries an inline `checks` array.
+`scripts/test_project_setup.py` holds the fixture-based tests (run them with the
+shared runtime's `python -m unittest`).

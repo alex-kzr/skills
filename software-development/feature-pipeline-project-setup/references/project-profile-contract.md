@@ -151,7 +151,10 @@ Nothing is written outside `tools/**` and the root `.gitignore`.
   type.
 - `roles` carries only the minimum grants confirmed for each role.
 - Checks live here inline under an optional `checks` array **or** are split
-  into `checks.json`; never both.
+  into `checks.json`; never both. `scripts/setup_project.py` always chooses the
+  split form when at least one check is declared, so a generated
+  `pipeline.profile.json` never carries an inline `checks` array.
+- `project` is the basename of the resolved `--project-root`.
 
 ## Schema: integrations.json
 
@@ -227,7 +230,13 @@ The complete required output set for a Graphify build is exactly:
 
 Tracked workspace files (`.graphifyignore`, `config/`) make indexing rules and
 wrapper invocation explicit and reproducible. The build must be runnable
-without an installer subcommand.
+without an installer subcommand. `scripts/setup_project.py` writes
+`tools/graphify/config/graphify.project.json` (project settings: `workspace`,
+`out_dir`, `required_outputs`, `diff_policy`) and copies the approved wrapper
+source verbatim under `graphify.wrapper_destination`; `.graphifyignore` excludes
+only `graphify-out/` from indexing. The optional thin
+`tools/feature-pipeline/run_pipeline.py` launcher is not generated — its absence
+is recorded in the setup report `notes`.
 
 ## Ignore rule and tracked/generated split
 
