@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Pipeline Project Setup"
+  short_description: "Scaffold project-local feature pipeline setup"
+  default_prompt: "Use $feature-pipeline-project-setup to generate this repository's project-local pipeline and Graphify configuration."
