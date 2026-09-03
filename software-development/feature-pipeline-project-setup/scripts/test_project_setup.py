@@ -57,6 +57,7 @@ def _valid_input() -> dict:
             "enabled": True,
             "wrapper_source": None,  # filled in by the test with a real fixture dir
             "wrapper_destination": "tools/graphify/config/wrapper",
+            "index_excludes": ["docs/fixtures", "feature-pipeline-skill/fixtures"],
         },
     }
 
@@ -84,7 +85,9 @@ class GeneratorTestCase(unittest.TestCase):
         self.wrapper_src = Path(self._tmp.name) / "approved-wrapper"
         self.wrapper_src.mkdir()
         (self.wrapper_src / "build_graph.sh").write_text(
-            "#!/bin/sh\nexec graphify build tools/graphify \"$@\"\n", encoding="utf-8"
+            '#!/bin/sh\nexport GRAPHIFY_OUT="$PWD/tools/graphify/graphify-out"\n'
+            'exec graphify update . "$@"\n',
+            encoding="utf-8",
         )
 
     def _input(self, **overrides) -> dict:
@@ -111,7 +114,8 @@ class GeneratorTestCase(unittest.TestCase):
         for name in ("pipeline.profile.json", "integrations.json", "checks.json"):
             self.assertTrue((cfg / name).is_file(), name)
         self.assertTrue((self.project / "tools" / "feature-pipeline" / "README.md").is_file())
-        self.assertTrue((self.project / "tools" / "graphify" / ".graphifyignore").is_file())
+        self.assertTrue((self.project / ".graphifyignore").is_file())
+        self.assertFalse((self.project / "tools" / "graphify" / ".graphifyignore").exists())
         self.assertTrue(
             (self.project / "tools" / "graphify" / "config" / "wrapper" / "build_graph.sh").is_file()
         )
@@ -127,7 +131,19 @@ class GeneratorTestCase(unittest.TestCase):
         integrations = json.loads((cfg / "integrations.json").read_text(encoding="utf-8"))
         self.assertEqual(report["graphify_enabled"], True)
         self.assertEqual(integrations["graphify"]["workspace"], "tools/graphify")
+        self.assertEqual(integrations["graphify"]["scan_root"], ".")
         self.assertEqual(integrations["graphify"]["diff_policy"], "tracked-empty")
+
+        graphifyignore = (self.project / ".graphifyignore").read_text(encoding="utf-8")
+        self.assertIn("/tools/graphify/graphify-out/", graphifyignore.splitlines())
+        # project-declared index_excludes become anchored rules
+        self.assertIn("/docs/fixtures", graphifyignore.splitlines())
+        self.assertIn("/feature-pipeline-skill/fixtures", graphifyignore.splitlines())
+        gp = json.loads(
+            (self.project / "tools/graphify/config/graphify.project.json").read_text("utf-8")
+        )
+        self.assertEqual(gp["scan_root"], ".")
+        self.assertEqual(gp["workspace"], "tools/graphify")
 
     def test_gitignore_line_added_once_and_preserves_content(self) -> None:
         gitignore = self.project / ".gitignore"
@@ -167,9 +183,29 @@ class GeneratorTestCase(unittest.TestCase):
             ],
         )
         self.assertEqual(block["diff_policy"], "tracked-empty")
+        self.assertEqual(block["scan_root"], ".")
         joined = json.dumps(integrations)
         self.assertNotIn("graph.html", joined)
         self.assertNotIn('"tools/graphify"\n', joined)  # never ignore the whole tree
+
+    def test_empty_index_excludes_yields_output_rule_only(self) -> None:
+        data = self._input()
+        data["graphify"]["index_excludes"] = []
+        self._run(data)
+        body = (self.project / ".graphifyignore").read_text(encoding="utf-8")
+        self.assertIn("/tools/graphify/graphify-out/", body.splitlines())
+        self.assertNotIn("Project-declared exclusions", body)
+
+    def test_index_excludes_dedupes_and_rejects_root(self) -> None:
+        data = self._input()
+        data["graphify"]["index_excludes"] = ["docs/x/", "docs/x", "docs/y"]
+        report = self._run(data)
+        self.assertEqual(
+            report["confirmed_inputs"]["graphify"]["index_excludes"], ["docs/x", "docs/y"]
+        )
+        bad = self._input()
+        bad["graphify"]["index_excludes"] = ["."]
+        self._assert_no_writes(bad, "index_excludes may not name the repo root")
 
     # -- idempotency -----------------------------------------------------
 
@@ -179,10 +215,13 @@ class GeneratorTestCase(unittest.TestCase):
         tracked = _snapshot(self.project / "tools")
         gitignore_first = (self.project / ".gitignore").read_bytes()
 
+        graphifyignore_first = (self.project / ".graphifyignore").read_bytes()
+
         self._run(self._input())
 
         self.assertEqual(_snapshot(self.project / "tools"), tracked)
         self.assertEqual((self.project / ".gitignore").read_bytes(), gitignore_first)
+        self.assertEqual((self.project / ".graphifyignore").read_bytes(), graphifyignore_first)
         self.assertEqual(
             (self.project / ".gitignore").read_text("utf-8").count("/tools/graphify/graphify-out/"),
             1,
@@ -266,6 +305,7 @@ class GeneratorTestCase(unittest.TestCase):
 
         self.assertFalse((self.project / "tools" / "graphify").exists())
         self.assertFalse((self.project / ".gitignore").exists())
+        self.assertFalse((self.project / ".graphifyignore").exists())
         integrations = json.loads(
             (self.project / "tools/feature-pipeline/config/integrations.json").read_text("utf-8")
         )
@@ -279,11 +319,11 @@ class GeneratorTestCase(unittest.TestCase):
         self._run(self._input())
         self.assertEqual(_snapshot(core), before)
 
-    def test_written_files_stay_within_tools_and_gitignore(self) -> None:
+    def test_written_files_stay_within_tools_and_root_ignore_files(self) -> None:
         report = self._run(self._input())
         for rel in report["written_files"]:
             self.assertTrue(
-                rel == ".gitignore" or rel.startswith("tools/"),
+                rel in (".gitignore", ".graphifyignore") or rel.startswith("tools/"),
                 rel,
             )
 
@@ -335,7 +375,9 @@ class ValidatorTestCase(unittest.TestCase):
         self.wrapper_src = Path(self._tmp.name) / "approved-wrapper"
         self.wrapper_src.mkdir()
         (self.wrapper_src / "build_graph.sh").write_text(
-            "#!/bin/sh\nexec graphify build tools/graphify \"$@\"\n", encoding="utf-8"
+            '#!/bin/sh\nexport GRAPHIFY_OUT="$PWD/tools/graphify/graphify-out"\n'
+            'exec graphify update . "$@"\n',
+            encoding="utf-8",
         )
         self.assertEqual(_git(self.project, "init", "-q").returncode, 0)
 
@@ -511,6 +553,27 @@ class ValidatorTestCase(unittest.TestCase):
             lambda o: o["graphify"].__setitem__("workspace", "graphify"),
         )
         self._assert_single("E_GRAPHIFY_WORKSPACE")
+
+    def test_graphify_scan_root_wrong_fails(self) -> None:
+        self._patch_json(
+            self.integrations,
+            lambda o: o["graphify"].__setitem__("scan_root", "tools/graphify"),
+        )
+        self._assert_single("E_GRAPHIFY_SCAN_ROOT")
+
+    def test_root_graphifyignore_without_output_rule_fails(self) -> None:
+        (self.project / ".graphifyignore").write_text("# nothing useful\n", encoding="utf-8")
+        self._assert_single("E_GRAPHIFYIGNORE_OUTPUT_RULE")
+
+    def test_root_graphifyignore_missing_fails(self) -> None:
+        (self.project / ".graphifyignore").unlink()
+        self._assert_single("E_STRUCTURE")
+
+    def test_root_graphifyignore_git_ignored_fails(self) -> None:
+        self.gitignore.write_text(
+            self.gitignore.read_text("utf-8") + "/.graphifyignore\n", encoding="utf-8"
+        )
+        self._assert_single("E_GIT_CONFIG_IGNORED")
 
     def test_graphify_missing_wrapper_dir_fails(self) -> None:
         import shutil

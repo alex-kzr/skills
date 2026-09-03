@@ -45,7 +45,9 @@ Required:
 5. **Roles and grants** — the agent roles used and the minimum grants each
    role needs.
 6. **Graphify** — whether Graphify is enabled and, if so, the approved wrapper
-   **source** location and its **destination** inside the project workspace.
+   **source** location, its **destination** inside `tools/graphify/`, and any
+   **`index_excludes`** — extra repository-relative paths (on top of `.gitignore`
+   and Graphify's built-in cache skips) to keep out of the index.
 
 Present discovered values as a list and wait for explicit confirmation.
 Treat unconfirmed or absent values as a hard stop, not a default.
@@ -60,20 +62,35 @@ anchor-relative:
   `config/checks.json` when checks are split out, an optional thin
   `run_pipeline.py` launcher, and `README.md`.
 - **Graphify policy and wrappers** — tracked, under `tools/graphify/` when
-  Graphify is enabled: `.graphifyignore` and `config/` (project-local settings
-  and the approved wrapper).
+  Graphify is enabled: `config/graphify.project.json` (project-local settings)
+  and the approved wrapper. `tools/graphify/` is the Graphify **config/output
+  home**, not the scan root.
+- **Graphify indexing rules** — a tracked repository-root `.graphifyignore`
+  (skill-owned, overwritten on regeneration). Graphify indexes the whole
+  repository *from the root*, so its ignore file must live at the root. It
+  always excludes `/tools/graphify/graphify-out/` and then any project-declared
+  `index_excludes`. The root `.gitignore` and Graphify's built-in cache/venv
+  skips are also honoured.
 - **Generated Graphify artifacts** — only ever under
-  `tools/graphify/graphify-out/`, and never tracked.
+  `tools/graphify/graphify-out/`, and never tracked. The wrapper pins
+  `GRAPHIFY_OUT` to that directory so output lands there even though the scan
+  root is the repository root.
 - **Ignore rule** — add exactly `/tools/graphify/graphify-out/` to the root
-  `.gitignore`. Do not ignore the rest of `tools/graphify/`.
+  `.gitignore`. Do not ignore the rest of `tools/graphify/`, and never ignore
+  the tracked root `.graphifyignore`.
 - **Setup report** — the actual commands run and their results.
 
 The required Graphify output set is exactly five files under
 `tools/graphify/graphify-out/`: `graph.json`, `GRAPH_REPORT.md`,
 `manifest.json`, `.graphify_labels.json`, `.graphify_root`. `graph.html` may be
 produced but its absence is not an error. See the reference for the exact
-`integrations.json` `graphify` block, including `workspace`, `wrapper_dir`,
-`diff_policy: tracked-empty`, and the installer denylist.
+`integrations.json` `graphify` block, including `workspace` (config/output
+home), `scan_root` (`.` — the repository root), `wrapper_dir`,
+`diff_policy: tracked-empty`, and the installer denylist. The approved wrapper
+must run `graphify update .` (repository root as the scan root) with
+`GRAPHIFY_OUT` pinned to `tools/graphify/graphify-out`; passing
+`tools/graphify` as the `graphify update` argument would index only that
+directory.
 
 ## Prohibited
 
@@ -95,15 +112,17 @@ produced but its absence is not an error. See the reference for the exact
 2. Collect the six required inputs; discover what you can and present every
    value for explicit confirmation.
 3. Stop if any value is missing or unconfirmed.
-4. Write the project-local configuration, Graphify workspace, and ignore rule
-   listed above — nothing outside `tools/` and the root `.gitignore`.
+4. Write the project-local configuration, Graphify config/output home, and the
+   ignore rules listed above — nothing outside `tools/`, the root `.gitignore`,
+   and the root `.graphifyignore`.
 5. Produce the setup report with the exact commands and their results.
 
 ## Generator
 
 `scripts/setup_project.py` performs steps 3–5 deterministically and
 fail-closed. It validates the entire input before the first write, renders every
-file in memory, then writes only under `tools/**` and the root `.gitignore`:
+file in memory, then writes only under `tools/**`, the root `.gitignore`
+(merged), and the root `.graphifyignore` (overwritten):
 
 ```
 python scripts/setup_project.py --input <input.json> \
@@ -137,13 +156,14 @@ python scripts/validate_project_setup.py --self-test
 
 It validates directory structure, JSON syntax and schema, known task types,
 anchor-relative non-escaping paths, shell-free check `argv`, role/grant shape,
-run-state placement, and — when Graphify is enabled — `workspace: tools/graphify`,
-an existing non-empty wrapper directory, exactly the five required
-`expected_outputs` in order, `diff_policy: tracked-empty`, the complete installer
-denylist, the narrow `/tools/graphify/graphify-out/` ignore rule (rejecting any
-rule that hides all of `tools/graphify/`), no Git-tracked file under
-`tools/graphify/graphify-out/`, and that tracked configuration and wrappers are
-not Git-ignored. It prints a JSON report and exits `0` when valid, `1` on any
+run-state placement, and — when Graphify is enabled — `workspace: tools/graphify`
+and `scan_root: .`, an existing non-empty wrapper directory, exactly the five
+required `expected_outputs` in order, `diff_policy: tracked-empty`, the complete
+installer denylist, a tracked repository-root `.graphifyignore` that contains the
+`/tools/graphify/graphify-out/` rule, the narrow `/tools/graphify/graphify-out/`
+`.gitignore` rule (rejecting any rule that hides all of `tools/graphify/`), no
+Git-tracked file under `tools/graphify/graphify-out/`, and that tracked
+configuration, wrappers, and the root `.graphifyignore` are not Git-ignored. It prints a JSON report and exits `0` when valid, `1` on any
 finding, `2` on a bad invocation (missing anchor, not a Git work tree). `--self-test`
 builds its fixture only in a temporary directory and proves both the passing and
 failing paths leave the tree byte-identical. Stable finding codes are listed in

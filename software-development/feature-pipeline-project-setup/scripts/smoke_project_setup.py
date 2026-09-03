@@ -301,6 +301,7 @@ def _smoke_input(wrapper_source: str) -> dict:
             "enabled": True,
             "wrapper_source": wrapper_source,
             "wrapper_destination": "tools/graphify/config/wrapper",
+            "index_excludes": ["docs/fixtures", "feature-pipeline-skill/fixtures"],
         },
     }
 
@@ -317,7 +318,9 @@ def _seed_fixture(tmp: Path, launched: "list[list[str]]") -> Path:
     wrapper_src = tmp / "wrapper-src"
     wrapper_src.mkdir()
     (wrapper_src / "build_graph.sh").write_text(
-        "#!/bin/sh\nexec graphify build tools/graphify \"$@\"\n", encoding="utf-8"
+        '#!/bin/sh\nexport GRAPHIFY_OUT="$PWD/tools/graphify/graphify-out"\n'
+        'exec graphify update . "$@"\n',
+        encoding="utf-8",
     )
 
     init = _run(["git", "init", "-q"], cwd=project, launched=launched)

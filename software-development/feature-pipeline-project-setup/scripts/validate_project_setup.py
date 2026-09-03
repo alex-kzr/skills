@@ -37,6 +37,7 @@ TASK_TYPES = setup_project.TASK_TYPES
 SHELL_TOKENS = setup_project.SHELL_TOKENS
 GITIGNORE_LINE = setup_project.GITIGNORE_LINE
 GRAPHIFY_WORKSPACE = setup_project.GRAPHIFY_WORKSPACE
+GRAPHIFY_SCAN_ROOT = setup_project.GRAPHIFY_SCAN_ROOT
 GRAPHIFY_OUT_DIR = setup_project.GRAPHIFY_OUT_DIR
 REQUIRED_GRAPHIFY_OUTPUTS = list(setup_project.REQUIRED_GRAPHIFY_OUTPUTS)
 FORBIDDEN_GRAPHIFY_COMMANDS = list(setup_project.FORBIDDEN_GRAPHIFY_COMMANDS)
@@ -47,7 +48,7 @@ PROFILE_REL = f"{FP_CONFIG}/pipeline.profile.json"
 INTEGRATIONS_REL = f"{FP_CONFIG}/integrations.json"
 CHECKS_REL = f"{FP_CONFIG}/checks.json"
 README_REL = "tools/feature-pipeline/README.md"
-GRAPHIFYIGNORE_REL = "tools/graphify/.graphifyignore"
+GRAPHIFYIGNORE_REL = setup_project.ROOT_GRAPHIFYIGNORE_REL  # repository-root .graphifyignore
 GRAPHIFY_PROJECT_CONFIG_REL = "tools/graphify/config/graphify.project.json"
 
 #: A ``.gitignore`` rule that would hide the whole tracked ``tools/graphify/``
@@ -376,10 +377,36 @@ def _validate_graphify(root: Path, findings: "list[Finding]") -> bool:
         findings.append(
             Finding(
                 "E_GRAPHIFY_WORKSPACE",
-                f"{INTEGRATIONS_REL}.graphify.workspace must be {GRAPHIFY_WORKSPACE!r}, "
-                f"got {block.get('workspace')!r}",
+                f"{INTEGRATIONS_REL}.graphify.workspace must be {GRAPHIFY_WORKSPACE!r} "
+                f"(the config/output home), got {block.get('workspace')!r}",
             )
         )
+
+    if block.get("scan_root") != GRAPHIFY_SCAN_ROOT:
+        findings.append(
+            Finding(
+                "E_GRAPHIFY_SCAN_ROOT",
+                f"{INTEGRATIONS_REL}.graphify.scan_root must be {GRAPHIFY_SCAN_ROOT!r} "
+                f"(Graphify indexes the whole repository), got {block.get('scan_root')!r}",
+            )
+        )
+
+    # The root .graphifyignore is the scan-root indexing-rule file; it must at
+    # least keep generated Graphify output out of the index.
+    ignore_path = root / GRAPHIFYIGNORE_REL
+    if ignore_path.is_file():
+        ignore_lines = {
+            line.strip()
+            for line in ignore_path.read_text(encoding="utf-8").splitlines()
+        }
+        if GITIGNORE_LINE not in ignore_lines:
+            findings.append(
+                Finding(
+                    "E_GRAPHIFYIGNORE_OUTPUT_RULE",
+                    f"{GRAPHIFYIGNORE_REL} must contain {GITIGNORE_LINE!r} so generated "
+                    "output is never indexed",
+                )
+            )
 
     wrapper_dir = block.get("wrapper_dir")
     bad = _path_finding(wrapper_dir, f"{INTEGRATIONS_REL}.graphify.wrapper_dir")
@@ -474,10 +501,13 @@ def _validate_git_boundaries(
     must_stay_trackable = [PROFILE_REL, INTEGRATIONS_REL, README_REL]
     if (root / CHECKS_REL).is_file():
         must_stay_trackable.append(CHECKS_REL)
+    # The root .graphifyignore lives outside tools/graphify/, so a broad
+    # tools/graphify/ ignore rule cannot shadow it — always check it.
+    if graphify_enabled:
+        must_stay_trackable.append(GRAPHIFYIGNORE_REL)
     # A broad tools/graphify/ ignore rule is already reported as
     # E_GITIGNORE_BROAD_RULE; don't also re-report each file it shadows.
     if graphify_enabled and not broad_ignore:
-        must_stay_trackable.append(GRAPHIFYIGNORE_REL)
         if (root / GRAPHIFY_PROJECT_CONFIG_REL).is_file():
             must_stay_trackable.append(GRAPHIFY_PROJECT_CONFIG_REL)
         wrapper = root / "tools/graphify/config"
@@ -580,6 +610,7 @@ def _self_test_input(wrapper_source: str) -> dict:
             "enabled": True,
             "wrapper_source": wrapper_source,
             "wrapper_destination": "tools/graphify/config/wrapper",
+            "index_excludes": ["docs/fixtures"],
         },
     }
 
@@ -599,7 +630,9 @@ def self_test() -> int:
         wrapper_src = tmp / "approved-wrapper"
         wrapper_src.mkdir()
         (wrapper_src / "build_graph.sh").write_text(
-            "#!/bin/sh\nexec graphify build tools/graphify \"$@\"\n", encoding="utf-8"
+            '#!/bin/sh\nexport GRAPHIFY_OUT="$PWD/tools/graphify/graphify-out"\n'
+            'exec graphify update . "$@"\n',
+            encoding="utf-8",
         )
 
         if _git(project, "init", "-q").returncode != 0:
