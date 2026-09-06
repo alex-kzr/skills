@@ -23,7 +23,7 @@ If the user specifies which plan to execute but does not specify a phase or task
 
 1. **Find the next open task.** Open `docs/kanban.md` and the plan file (`docs/plans/YYYY-MM-DD-<plan-name>.md`). Pick the topmost task under "To Do" that belongs to this plan and has no unmet dependency.
 
-    A task's dependencies are whatever its `## Execution Metadata` → `Depends on` field names (see [Task Metadata and Scope](#task-metadata-and-scope)). When a task file has no such block, fall back to position: earlier tasks in its phase must already be "Done". Never treat a dependency as met because it *looks* finished — it must be "Done" on the board.
+    A task's dependencies are whatever its `## Execution Metadata` → `Depends on` field names (see [Task Metadata and Scope](#task-metadata-and-scope)). When a task file has no such block, fall back to position: earlier tasks in its phase must be completed. Never treat a dependency as met because it *looks* finished — its task file must record `Done` and a completed `## Result`.
 
 2. **Check the phase's Execution tag** in the plan file (see [writing-plans → Execution Mode Guidance](../writing-plans/SKILL.md#execution-mode-guidance)) to decide the scope of this session:
 
@@ -77,9 +77,9 @@ Repeat the following loop:
 9. Update:
 
     * If you are running the board directly for a human, with no orchestrator and no independent verifier:
-      move task to "Done" in `docs/kanban.md`, update status in `docs/plans/tasks/{task-id}_{task-short-name}.md`, and remove the lease at `docs/.agents/locks/{task-id}.lock`
+      remove the task from "In Progress" in the active `docs/kanban.md`, mark the task file `Done`, upsert its `## Result` with the exact command, working directory, exit code, and self-validation evidence, and remove the lease at `docs/.agents/locks/{task-id}.lock`
     * If you are running under an orchestrator or pipeline runner:
-      leave the board and `## Status` unchanged, keep or hand off the lease according to the orchestrator's policy, and stop at the terminal state `implemented`
+      leave the board, `## Status`, and `## Result` unchanged, keep or hand off the lease according to the orchestrator's policy, and stop at the terminal state `implemented`. After independent verification, the runner owns the active-board and task-local-result projection.
 
 10. Repeat to next task
 
@@ -97,7 +97,7 @@ Treat it as binding, not advisory:
 | Field | What it obliges you to do |
 |---|---|
 | `Type`, `Executor` | Confirm you are the right executor. If the task names an executor you are not, stop and say so instead of proceeding. |
-| `Depends on` | Do not start until every listed task is "Done". `none` means no dependency. |
+| `Depends on` | Do not start until every listed task's task file records `Done` and a completed `## Result`. `none` means no dependency. |
 | `Allowed scope` | Write only inside these paths. A needed change outside them is an out-of-scope discovery, not a licence to expand. |
 | `Out of scope` | Never write here, even if `Allowed scope` looks like it might overlap. |
 | `Required skills` | Read every listed `SKILL.md` before implementing. |
@@ -123,8 +123,9 @@ someone with fresh context comparing the diff against the acceptance criteria.
   proves it.
 - When you are running under an orchestrator (dispatched as a subagent, or driven by a pipeline
   runner), your terminal state is **`implemented`**, not "Done": implement, validate, report, and
-  stop. The orchestrator dispatches verification and only then moves the card. Do not edit the
-  board or the `## Status` checkboxes to "Done" yourself in that mode, and do not write to run
+  stop. The runner dispatches independent verification and, only after that completes, projects
+  `running`, `blocked`, or independently `verified` state to the active board and task file. Do
+  not edit the board, `## Status`, or `## Result` yourself in that mode, and do not write to run
   state — you have no write path to it.
 - When you are running the board directly for a human, with no orchestrator and no independent
   verifier, step 9 below is yours to perform — say plainly in your report that the task was
@@ -156,7 +157,7 @@ Rules:
 
 * Before moving a task to "In Progress", create its lease file.
 * If a fresh lease already exists for another active agent/session, do NOT take that task — pick the next eligible one instead.
-* Remove the lease when the task moves to "Done".
+* Remove the lease when a completed task leaves the active board.
 * If blocked (see [If Blocked](#if-blocked)), document the blocker in the task file and remove the lease before moving the task back to "To Do".
 
 This is guidance, not a locking system — it does not require a lock server, retries, or expiry logic. Treat a stale-looking lease from a dead session as a judgment call: confirm with the user before taking it over.

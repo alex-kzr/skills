@@ -79,7 +79,7 @@ Decide this while designing phases (Step 3), not as an afterthought — it direc
 
 ### Task Leases for Parallel Work
 
-When a phase is `parallel` (or multiple agents may otherwise work the same board concurrently), executors take a lightweight lease at `docs/.agents/locks/{task-id}.lock` before moving a task to "In Progress", and remove it on "Done" or when un-blocking back to "To Do". See [board-task-executor → Task Leases](../board-task-executor/SKILL.md#task-leases-parallel-safety) for the file format and rules. No plan-writing action is needed here beyond marking the phase `parallel` correctly — the lease mechanics are handled by the executor.
+When a phase is `parallel` (or multiple agents may otherwise work the same board concurrently), executors take a lightweight lease at `docs/.agents/locks/{task-id}.lock` before moving a task to "In Progress", and remove it when the completed task leaves the active board or when un-blocking back to "To Do". See [board-task-executor → Task Leases](../board-task-executor/SKILL.md#task-leases-parallel-safety) for the file format and rules. No plan-writing action is needed here beyond marking the phase `parallel` correctly — the lease mechanics are handled by the executor.
 
 ## Task Metadata (Machine-Readable)
 
@@ -96,7 +96,7 @@ it depends on, and how it is checked. Add the block to every **new** task file.
 - Out of scope: `<path glob>` | none
 - Required skills: `<exact path to a SKILL.md>` | none
 - Maximum repair attempts: 2
-- Documentation impact: `<doc path>` | none
+- Documentation impact: `<safe repository-relative POSIX doc path or glob>` | none
 - Verification commands:
   - `<cwd>` -> `<command>`
 - Blocking conditions: <text> | none
@@ -108,7 +108,12 @@ Rules that hold in every project:
 - Lists are comma-separated; backticks around paths are optional and ignored.
 - "Nothing" is always the literal `none`. An empty value is an error, never an implicit `none` —
   an author must not be able to skip a decision by leaving a blank.
-- Paths are repository-relative and POSIX-separated. No absolute path, no `~`, no `..`.
+- Execution-boundary paths are repository-relative and POSIX-separated. No absolute path, no
+  `~`, no `..`.
+- `Documentation impact` is descriptive only: it may use safe repository-relative POSIX paths or
+  globs (for example `docs/agents/**` or `docs/*.md`), but never grants execution access. Required
+  skills and verification-command CWDs remain concrete repository-relative paths; `Allowed scope`
+  and `Out of scope` retain their own execution-scope validator.
 - `Required skills` names **exact** `SKILL.md` paths. "the Rust skill" is not a path.
 - `Verification commands` lists only commands the repository actually defines, one per entry,
   with no shell operators (`|`, `&&`, `;`, `>`), so each has its own exit code.
@@ -215,12 +220,9 @@ Update `src/handlers.py` to load history before `ask_llm()` and save the respons
 
 ## In Progress
 - (empty)
-
-## Done
-- (empty)
 ```
 
-All tasks start in **To Do** in execution order. Every entry must be a relative link to the task file using the format `[<Task ID>: <Task Name>](plans/tasks/<task-id>_<task-short-name>.md)`.
+All tasks start in **To Do** in execution order. This is an active-only board: when a task is completed, remove its card rather than adding it to a completion column. Every entry must be a relative link to the task file using the format `[<Task ID>: <Task Name>](plans/tasks/<task-id>_<task-short-name>.md)`.
 
 ## Task File Template
 
@@ -245,7 +247,7 @@ Plan — [YYYY-MM-DD-feature-name.md](../YYYY-MM-DD-feature-name.md)
 - Out of scope: `<path glob>` | none
 - Required skills: `<exact path to a SKILL.md>` | none
 - Maximum repair attempts: 2
-- Documentation impact: `<doc path>` | none
+- Documentation impact: `<safe repository-relative POSIX doc path or glob>` | none
 - Verification commands:
   - `<cwd>` -> `<command>`
 - Blocking conditions: <text> | none
@@ -290,6 +292,32 @@ Background, links to related files, modules, or docs.
 ## Follow-ups (optional)
 - Additional tasks discovered during implementation
 ```
+
+### Completion Result Contract
+
+A newly created or otherwise open task file has no `## Result` section. Upsert exactly one
+`## Result` section only when the task is completed; it is the durable, task-local completion
+record for both direct-board and orchestrated workflows. Its writer depends on the workflow:
+the direct human board runner records self-validation, while an orchestrated runner records the
+independently verified result from durable evidence. Executors do not write it while handing off
+at `implemented`.
+
+Use this shape, retaining exact command, working-directory, exit-code, and evidence references:
+
+```markdown
+## Result
+
+Completed <RFC3339 timestamp> — outcome: **<self-validated | verified>**.
+
+Verification commands:
+- `<working directory> -> <command>` — exit <code>
+
+Evidence:
+- <repository-relative report, log, or other durable evidence path>
+```
+
+Do not append duplicate result sections on a retry or resume; replace or update the one existing
+section from the authoritative completion evidence.
 
 ## Writing Process
 
