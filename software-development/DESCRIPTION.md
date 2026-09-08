@@ -1,5 +1,5 @@
 ---
-description: Software development skills — systematic debugging, TDD, batch delegation, orchestration patterns, spike investigations, subagent-driven development, plan writing.
+description: Software development skills — debugging, TDD, planning, codebase metrics, GitHub CLI workflows, and agent delegation.
 ---
 
 # Software Development
@@ -19,7 +19,9 @@ Skills for structured software development workflows and engineering best practi
 | Skill | [inspecting-hermes-desktop-dom/](inspecting-hermes-desktop-dom/SKILL.md) | Inspect the live Hermes desktop DOM and CSS through CDP. | Open when diagnosing Hermes desktop UI behaviour or styling. |
 | Skill | [node-inspect-debugger/](node-inspect-debugger/SKILL.md) | Debug Node.js with `--inspect` and the Chrome DevTools Protocol CLI. | Open when debugging a Node.js process through its inspector. |
 | Skill | [board-task-executor/](board-task-executor/SKILL.md) | Execute tasks from a task board in order, moving them through To Do, In Progress, and Done while preserving task status and validation. | Open when working through a task board one task at a time. |
+| Skill | [codebase-inspection/](codebase-inspection/SKILL.md) | Inspect codebase size, languages, and code ratios with pygount. | Open when measuring a repository's codebase. |
 | Skill | [feature-pipeline-project-setup/](feature-pipeline-project-setup/SKILL.md) | Generate a repository's project-local feature-pipeline and Graphify configuration — task routing, technology checks, run-state location, agent grants, and the Graphify workspace — without touching the portable pipeline core. | Open when onboarding a new project to the feature pipeline, when a repository needs tracked `tools/feature-pipeline` and `tools/graphify` workspaces, or when adopting project-local Graphify. |
+| Skill | [github/](github/SKILL.md) | Use the gh CLI for pull requests, issues, reviews, repositories, and authentication. | Open when operating GitHub from the command line. |
 | Skill | [plan/](plan/SKILL.md) | Plan mode: write markdown plan to .hermes/plans/, no exec. | Open when the task requires producing a written plan before any implementation. |
 | Skill | [python-debugpy/](python-debugpy/SKILL.md) | Debug Python with the pdb REPL and debugpy remote DAP support. | Open when debugging Python code locally or through a remote debugger. |
 | Skill | [requesting-code-review/](requesting-code-review/SKILL.md) | Pre-commit review: security scan, quality gates, auto-fix. | Open when running a code review or quality gate before committing. |

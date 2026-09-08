@@ -1,5 +1,5 @@
 ---
-description: Skills for academic research, paper discovery, literature review, domain reconnaissance, market data, content monitoring, and scientific knowledge retrieval.
+description: Skills for academic and web research, paper discovery, content monitoring, and RSS, Atom, and JSON feeds.
 ---
 
 # Research
@@ -17,3 +17,4 @@ Skills for academic research, paper discovery, literature review, and scientific
 | Skill | [llm-wiki/](llm-wiki/SKILL.md) | Karpathy's LLM Wiki: build/query interlinked markdown KB. | Open when building or querying a markdown knowledge base. |
 | Skill | [polymarket/](polymarket/SKILL.md) | Query Polymarket: markets, prices, orderbooks, history. | Open when fetching prediction market data from Polymarket. |
 | Skill | [research-paper-writing/](research-paper-writing/SKILL.md) | Write ML papers for NeurIPS/ICML/ICLR: design→submit. | Open when writing a machine learning research paper. |
+| Skill | [rss-feeds/](rss-feeds/SKILL.md) | Read RSS, Atom, and JSON feeds; discover feeds behind a page. | Open when reading a feed or finding one associated with a web page. |

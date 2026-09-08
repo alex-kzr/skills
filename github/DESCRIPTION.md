@@ -10,7 +10,6 @@ Skills for managing GitHub repositories, pull requests, code reviews, issues, an
 
 | Type | Path | Description | When to open |
 |---|---|---|---|
-| Skill | [codebase-inspection/](codebase-inspection/SKILL.md) | Inspect repository size, languages, and code ratios with pygount. | Open when measuring or profiling a codebase. |
 | Skill | [github-auth/](github-auth/SKILL.md) | GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login. | Open when setting up GitHub authentication. |
 | Skill | [github-code-review/](github-code-review/SKILL.md) | Review PRs: diffs, inline comments via gh or REST. | Open when reviewing pull requests with inline comments. |
 | Skill | [github-issues/](github-issues/SKILL.md) | Create, triage, label, assign GitHub issues via gh or REST. | Open when managing GitHub issues. |
