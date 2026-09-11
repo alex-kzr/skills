@@ -24,3 +24,5 @@ graphify-graph/
 /**/.pytest_cache/
 /**/.mypy_cache/
 /**/.ruff_cache/
+
+.curator_ledger.jsonl
