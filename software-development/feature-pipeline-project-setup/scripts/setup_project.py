@@ -155,7 +155,7 @@ def validate_input(raw: Any) -> dict:
     norm_routing = []
     for i, entry in enumerate(routing):
         obj = _object(entry, f"task_routing[{i}]")
-        _reject_unknown(obj, {"task_type", "working_root"}, f"task_routing[{i}]")
+        _reject_unknown(obj, {"task_type", "working_root", "stack"}, f"task_routing[{i}]")
         task_type = _non_empty_str(obj["task_type"], f"task_routing[{i}].task_type")
         if task_type not in TASK_TYPES:
             raise SetupError(
@@ -165,23 +165,35 @@ def validate_input(raw: Any) -> dict:
             raise SetupError(f"task_routing has a duplicate task type: {task_type!r}")
         seen_types.add(task_type)
         working_root = _rel_path(obj["working_root"], f"task_routing[{i}].working_root")
-        norm_routing.append({"task_type": task_type, "working_root": working_root})
+        stack = _non_empty_str(obj["stack"], f"task_routing[{i}].stack")
+        norm_routing.append(
+            {"task_type": task_type, "working_root": working_root, "stack": stack}
+        )
 
     stacks = _list(data["technology_stacks"], "technology_stacks")
     if not stacks:
         raise SetupError("technology_stacks must not be empty")
     norm_stacks = []
+    seen_stack_ids: set[str] = set()
     for i, entry in enumerate(stacks):
         obj = _object(entry, f"technology_stacks[{i}]")
-        _reject_unknown(obj, {"stack", "checks"}, f"technology_stacks[{i}]")
+        _reject_unknown(obj, {"stack", "role", "checks"}, f"technology_stacks[{i}]")
         stack = _non_empty_str(obj["stack"], f"technology_stacks[{i}].stack")
+        if stack in seen_stack_ids:
+            raise SetupError(f"technology_stacks has a duplicate stack id: {stack!r}")
+        seen_stack_ids.add(stack)
+        role = _non_empty_str(obj["role"], f"technology_stacks[{i}].role")
         checks = _list(obj["checks"], f"technology_stacks[{i}].checks")
         norm_checks = []
         for j, chk in enumerate(checks):
             cobj = _object(chk, f"technology_stacks[{i}].checks[{j}]")
-            _reject_unknown(
-                cobj, {"name", "argv", "cwd"}, f"technology_stacks[{i}].checks[{j}]"
-            )
+            check_field = f"technology_stacks[{i}].checks[{j}]"
+            extra = set(cobj) - {"name", "argv", "cwd", "required"}
+            if extra:
+                raise SetupError(f"{check_field} has unknown key(s): {sorted(extra)}")
+            missing = {"name", "argv", "cwd"} - set(cobj)
+            if missing:
+                raise SetupError(f"{check_field} is missing required key(s): {sorted(missing)}")
             name = _non_empty_str(
                 cobj["name"], f"technology_stacks[{i}].checks[{j}].name"
             )
@@ -202,8 +214,30 @@ def validate_input(raw: Any) -> dict:
                     )
                 norm_argv.append(tok)
             cwd = _rel_path(cobj["cwd"], f"technology_stacks[{i}].checks[{j}].cwd")
-            norm_checks.append({"name": name, "argv": norm_argv, "cwd": cwd})
-        norm_stacks.append({"stack": stack, "checks": norm_checks})
+            norm_check = {"name": name, "argv": norm_argv, "cwd": cwd}
+            if "required" in cobj:
+                if not isinstance(cobj["required"], bool):
+                    raise SetupError(
+                        f"technology_stacks[{i}].checks[{j}].required must be a boolean"
+                    )
+                norm_check["required"] = cobj["required"]
+            norm_checks.append(norm_check)
+        if not norm_checks:
+            raise SetupError(
+                f"technology_stacks[{i}].checks must declare at least one check "
+                "(a stack with no checks of its own can never be a route's stack unless "
+                "every route using it relies solely on a repository-wide required check "
+                "declared by a different stack; declare an explicit check here instead)"
+            )
+        norm_stacks.append({"stack": stack, "role": role, "checks": norm_checks})
+
+    stack_ids = {s["stack"] for s in norm_stacks}
+    for i, route in enumerate(norm_routing):
+        if route["stack"] not in stack_ids:
+            raise SetupError(
+                f"task_routing[{i}] stack {route['stack']!r} is not declared in "
+                "technology_stacks"
+            )
 
     run_state_path = _rel_path(data["run_state_path"], "run_state_path")
 
@@ -220,6 +254,14 @@ def validate_input(raw: Any) -> dict:
             raise SetupError(f"roles[{i}].min_grants must not be empty")
         norm_grants = [_non_empty_str(g, f"roles[{i}].min_grants[]") for g in grants]
         norm_roles.append({"role": role, "min_grants": norm_grants})
+
+    declared_role_names = {r["role"] for r in norm_roles}
+    for i, stack_entry in enumerate(norm_stacks):
+        if stack_entry["role"] not in declared_role_names:
+            raise SetupError(
+                f"technology_stacks[{i}].role {stack_entry['role']!r} is not one of the "
+                f"declared roles: {sorted(declared_role_names)}"
+            )
 
     graphify = _object(data["graphify"], "graphify")
     enabled = graphify.get("enabled")
@@ -297,6 +339,14 @@ def _render_profile(data: dict, project_name: str) -> bytes:
             "core_root": data["anchors"]["core_root"],
         },
         "task_routing": data["task_routing"],
+        "stacks": [
+            {
+                "id": stack["stack"],
+                "role": stack["role"],
+                "checks": [chk["name"] for chk in stack["checks"]],
+            }
+            for stack in data["technology_stacks"]
+        ],
         "run_state_path": data["run_state_path"],
         "roles": data["roles"],
     }
@@ -311,14 +361,15 @@ def _render_checks(data: dict) -> bytes:
     checks = []
     for stack in data["technology_stacks"]:
         for chk in stack["checks"]:
-            checks.append(
-                {
-                    "stack": stack["stack"],
-                    "name": chk["name"],
-                    "argv": chk["argv"],
-                    "cwd": chk["cwd"],
-                }
-            )
+            check = {
+                "stack": stack["stack"],
+                "name": chk["name"],
+                "argv": chk["argv"],
+                "cwd": chk["cwd"],
+            }
+            if "required" in chk:
+                check["required"] = chk["required"]
+            checks.append(check)
     return _dumps({"schema_version": SCHEMA_VERSION, "checks": checks})
 
 

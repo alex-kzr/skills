@@ -277,17 +277,19 @@ def _smoke_input(wrapper_source: str) -> dict:
             "core_root": "feature-pipeline-skill",
         },
         "task_routing": [
-            {"task_type": "tooling", "working_root": "tools"},
-            {"task_type": "docs", "working_root": "docs"},
+            {"task_type": "tooling", "working_root": "tools", "stack": "python"},
+            {"task_type": "docs", "working_root": "docs", "stack": "python"},
         ],
         "technology_stacks": [
             {
                 "stack": "python",
+                "role": "executor",
                 "checks": [
                     {
                         "name": "unit",
                         "argv": ["uv", "run", "python", "-m", "unittest"],
                         "cwd": "feature-pipeline-skill",
+                        "required": True,
                     }
                 ],
             }

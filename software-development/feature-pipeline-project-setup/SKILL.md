@@ -36,11 +36,16 @@ Required:
 1. **Anchors** — explicit `project_root`, `agents_root`, and `core_root`
    (the portable `feature-pipeline-skill/` checkout). All three are given, not
    inferred.
-2. **Task routing** — the supported task types and the working root each one
-   maps to.
-3. **Technology stacks** — the stacks in play and, per stack, the exact
+2. **Task routing** — the supported task types, the working root each one
+   maps to, and the declared stack id it routes through.
+3. **Technology stacks** — the stacks in play, each with exactly one semantic
+   role (one of the confirmed agent roles below) and, per stack, the exact
    repository-defined check commands as `argv` + `cwd` pairs (no shell string,
-   no operators).
+   no operators). A stack id must be unique and a route's stack must name a
+   declared stack; the generator renders this as `pipeline.profile.json`'s
+   canonical `stacks[]` — `{id, role, checks}` — which every downstream loader
+   (setup validator, runnable project-profile loader, typed profile loader,
+   native-to-typed bridge) agrees on.
 4. **Run state** — the path where the pipeline stores run state.
 5. **Roles and grants** — the agent roles used and the minimum grants each
    role needs.
@@ -134,6 +139,8 @@ absolute/escaping path, `\` separator, shell-form `argv`, unapproved task type,
 unresolved Graphify wrapper, target outside `tools/**`) stops the run before any
 file is created. Check commands are always split into `config/checks.json` when
 present, so `pipeline.profile.json` never also carries an inline `checks` array.
+An optional boolean `technology_stacks[].checks[].required` is retained in each
+generated check record.
 `scripts/test_project_setup.py` holds the fixture-based tests for both the
 generator and the validator (run them with the shared runtime's
 `python -m unittest`).
@@ -156,7 +163,11 @@ python scripts/validate_project_setup.py --self-test
 
 It validates directory structure, JSON syntax and schema, known task types,
 anchor-relative non-escaping paths, shell-free check `argv`, role/grant shape,
-run-state placement, and — when Graphify is enabled — `workspace: tools/graphify`
+run-state placement, the canonical `stacks[]` binding (unique ids, a declared
+role per stack, every route's stack declared, and every check claimed by
+exactly one matching stack — a profile generated before this binding is a
+distinct legacy-diagnostic finding, never silently tolerated), and — when
+Graphify is enabled — `workspace: tools/graphify`
 and `scan_root: .`, an existing non-empty wrapper directory, exactly the five
 required `expected_outputs` in order, `diff_policy: tracked-empty`, the complete
 installer denylist, a tracked repository-root `.graphifyignore` that contains the

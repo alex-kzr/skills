@@ -67,9 +67,10 @@ no implicit default.
   ],
   "technology_stacks": [
     {
-      "stack": "<name>",
+      "stack": "<id>",
+      "role": "<one declared roles[].role name>",
       "checks": [
-        { "name": "<check id>", "argv": ["<exe>", "<arg>", "..."], "cwd": "<anchor-relative dir>" }
+        { "name": "<check id>", "argv": ["<exe>", "<arg>", "..."], "cwd": "<anchor-relative dir>", "required": true }
       ]
     }
   ],
@@ -88,9 +89,23 @@ no implicit default.
 
 Rules:
 
-- `task_routing` maps each supported task type to exactly one working root.
+- `task_routing` maps each supported task type to exactly one working root, and
+  each entry's `stack` must name a `technology_stacks[].stack` id declared
+  below it — an undeclared route stack is a hard stop.
+- `technology_stacks[].stack` is a unique id (a duplicate id is a hard stop).
+- `technology_stacks[].role` is exactly one semantic role per stack — it must
+  be one of the role names declared in `roles[].role` (see below); a role that
+  is not declared there is a hard stop. This binds each stack to the agent
+  role that owns it, the same vocabulary `roles[]` already declares — there is
+  no separate, second role catalog.
+- `technology_stacks[].checks` must declare at least one check; a stack with
+  no checks of its own can never be a route's stack (a route's resolved check
+  set is that stack's own checks plus any repository-wide `required` check —
+  an empty result is a hard stop, never a silent no-op).
 - `technology_stacks[].checks[].argv` is a real argv list — no shell string,
   no `|`, `&&`, `;`, `>`, or `<`. Each check carries its own `cwd`.
+- `technology_stacks[].checks[].required` is optional; when present it must be
+  a boolean and is preserved in generated `checks.json`.
 - `run_state_path` is a single anchor-relative path.
 - `roles[].min_grants` lists the minimum grants for that role, nothing more.
 - When `graphify.enabled` is `true`, `index_excludes` is **required** (it may be
@@ -147,7 +162,10 @@ Nothing is written outside `tools/**` and the root `.gitignore`.
     "core_root": "<anchor-relative>"
   },
   "task_routing": [
-    { "task_type": "<name>", "working_root": "<anchor-relative dir>" }
+    { "task_type": "<name>", "working_root": "<anchor-relative dir>", "stack": "<stacks[].id>" }
+  ],
+  "stacks": [
+    { "id": "<name>", "role": "<roles[].role>", "checks": ["<check id>", "..."] }
   ],
   "run_state_path": "<anchor-relative path>",
   "roles": [
@@ -157,13 +175,32 @@ Nothing is written outside `tools/**` and the root `.gitignore`.
 ```
 
 - `task_routing` mirrors the confirmed input, one entry per supported task
-  type.
+  type, each carrying its own declared `stack` id.
+- `stacks` is the canonical, generated stack binding — `scripts/setup_project.py`
+  always renders one entry per confirmed `technology_stacks[]` entry, in the
+  same order: `id` is the stack id, `role` is its confirmed semantic role (one
+  of `roles[].role`), and `checks` is exactly the list of check names declared
+  under that stack (checks live once, in `checks.json`; this array only names
+  them). This is the single source every loader (the runnable project-profile
+  loader, the typed profile loader, and the native-to-typed bridge) reads to
+  resolve which checks a route's stack owns — none of them re-derive stack
+  ownership from `checks.json`'s own `stack` field alone.
 - `roles` carries only the minimum grants confirmed for each role.
 - Checks live here inline under an optional `checks` array **or** are split
   into `checks.json`; never both. `scripts/setup_project.py` always chooses the
   split form when at least one check is declared, so a generated
   `pipeline.profile.json` never carries an inline `checks` array.
 - `project` is the basename of the resolved `--project-root`.
+- **Legacy compatibility.** A `pipeline.profile.json` generated before this
+  binding existed has no top-level `stacks` key. That is not silently
+  tolerated: the validator reports the single, distinct `E_STACK_LEGACY_PROFILE`
+  finding (not a generic missing-key finding), and every core loader raises a
+  message naming this same migration path before building a route. The only
+  supported path forward is to regenerate
+  the setup output from a confirmed input that adds `technology_stacks[].role`
+  — never to hand-patch a `stacks` array onto an old generated file, and never
+  to have a loader guess a role from a task type, the first stack, or an
+  ambient default.
 
 ## Schema: integrations.json
 
@@ -241,13 +278,15 @@ Only generated when checks are split out of `pipeline.profile.json`.
       "stack": "<name>",
       "name": "<check id>",
       "argv": ["<exe>", "<arg>", "..."],
-      "cwd": "<anchor-relative dir>"
+      "cwd": "<anchor-relative dir>",
+      "required": true
     }
   ]
 }
 ```
 
-- `argv` is shell-free. Each check has an explicit `cwd`.
+- `argv` is shell-free. Each check has an explicit `cwd`. `required` is
+  optional and, when present, is a boolean retained verbatim from input.
 - Every check comes from a confirmed repository-defined command; no invented
   or approximated commands.
 
@@ -352,6 +391,13 @@ The codes are stable identifiers; tests pin one code per single injected defect.
 | `E_ARGV_TYPE` | A `checks.json` `argv` is not a non-empty list of non-empty strings. |
 | `E_ARGV_SHELL` | A `checks.json` `argv` token contains a shell operator (`|`, `&&`, `;`, `>`, `<`, `` ` ``, `$(`). |
 | `E_RUN_STATE_PLACEMENT` | `run_state_path` names the repo root / `tools`, or sits inside `tools/graphify/graphify-out/` or inside the portable core. |
+| `E_STACK_LEGACY_PROFILE` | `pipeline.profile.json` has no top-level `stacks` key — it predates the explicit `{id, role, checks}` stack binding; regenerate rather than hand-patch. |
+| `E_STACK_SCHEMA` | `stacks` is not a non-empty list, or an entry is not an object / is missing a non-empty `id` or `role` / has a non-list-of-strings `checks`. |
+| `E_STACK_DUPLICATE` | Two `stacks[]` entries declare the same `id`. |
+| `E_STACK_ROLE` | A `stacks[].role` is not one of the declared `roles[].role` names. |
+| `E_STACK_ROUTE` | A `task_routing[].stack` names an id that no `stacks[]` entry declares. |
+| `E_STACK_CHECK_MISMATCH` | A `stacks[].checks` name is not declared in `checks.json`, is claimed by more than one stack, or its `checks.json` `stack` field disagrees with the claiming `stacks[]` entry; or a `checks.json` check is not listed under any `stacks[].checks`. |
+| `E_STACK_UNRESOLVED` | A declared route stack resolves no checks — neither a check of its own nor any repository-wide `required` check. |
 | `E_ANCHOR_MISMATCH` | `pipeline.profile.json` `anchors.agents_root` / `anchors.core_root` does not match the anchor passed on the command line. |
 | `E_GRAPHIFY_WORKSPACE` | `integrations.json` `graphify.workspace` is not `tools/graphify` (the config/output home). |
 | `E_GRAPHIFY_SCAN_ROOT` | `integrations.json` `graphify.scan_root` is not `.` (Graphify must index the whole repository). |

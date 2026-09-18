@@ -301,6 +301,190 @@ def _validate_profile(
     elif roles is not _MISSING:
         findings.append(Finding("E_SCHEMA", f"{PROFILE_REL}.roles must be a list"))
 
+    stacks_value = profile.get("stacks", _MISSING) if isinstance(profile, dict) else _MISSING
+    if stacks_value is _MISSING:
+        findings.append(
+            Finding(
+                "E_STACK_LEGACY_PROFILE",
+                f"{PROFILE_REL} is missing required key 'stacks' — this profile predates "
+                "the explicit id/role/checks stack binding (TC-08); regenerate it with "
+                "the current feature-pipeline-project-setup generator, or see the migration "
+                "note in references/project-profile-contract.md before hand-editing it",
+            )
+        )
+    declared_role_names = (
+        {entry.get("role") for entry in roles if isinstance(entry, dict)}
+        if isinstance(roles, list)
+        else set()
+    )
+    _validate_stacks(
+        root,
+        stacks_value,
+        routing if isinstance(routing, list) else [],
+        declared_role_names,
+        findings,
+    )
+
+
+def _quiet_checks_doc(root: Path) -> "Any | None":
+    """Read ``checks.json`` for cross-referencing, without raising a finding for its
+    absence — ``_validate_checks`` already reports a missing/invalid file."""
+    path = root / CHECKS_REL
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+
+
+def _validate_stacks(
+    root: Path,
+    stacks: Any,
+    routing: list,
+    declared_role_names: "set[str]",
+    findings: "list[Finding]",
+) -> None:
+    """Validate ``pipeline.profile.json.stacks[]`` — the canonical, generated
+    ``{id, role, checks}`` stack binding — and cross-check it against
+    ``task_routing[].stack`` and ``checks.json``.
+
+    A legacy generated profile that predates this binding (no ``stacks`` key) is
+    reported as a missing-required-key ``E_SCHEMA`` finding by the ``_require``
+    call above; this function only runs the deeper checks once a ``stacks``
+    value is actually present, so the missing-key diagnostic stays the single,
+    explicit signal for a legacy profile (see the migration note in
+    project-profile-contract.md) rather than a cascade of stack findings.
+    """
+    if stacks is _MISSING:
+        return  # already reported: E_SCHEMA missing required key 'stacks'
+    if not isinstance(stacks, list) or not stacks:
+        findings.append(Finding("E_STACK_SCHEMA", f"{PROFILE_REL}.stacks must be a non-empty list"))
+        return
+
+    checks_doc = _quiet_checks_doc(root)
+    check_entries = (
+        checks_doc.get("checks") if isinstance(checks_doc, dict) else None
+    )
+    check_entries = check_entries if isinstance(check_entries, list) else []
+    check_by_name: "dict[str, dict]" = {
+        entry.get("name"): entry for entry in check_entries if isinstance(entry, dict) and entry.get("name")
+    }
+
+    stack_ids: "list[str]" = []
+    checks_claimed_by: "dict[str, str]" = {}
+    for i, entry in enumerate(stacks):
+        field = f"{PROFILE_REL}.stacks[{i}]"
+        if not isinstance(entry, dict):
+            findings.append(Finding("E_STACK_SCHEMA", f"{field} must be an object"))
+            continue
+        stack_id = entry.get("id")
+        role = entry.get("role")
+        check_names = entry.get("checks")
+        if not isinstance(stack_id, str) or not stack_id:
+            findings.append(Finding("E_STACK_SCHEMA", f"{field}.id must be a non-empty string"))
+            stack_id = None
+        if not isinstance(role, str) or not role:
+            findings.append(Finding("E_STACK_SCHEMA", f"{field}.role must be a non-empty string"))
+        elif declared_role_names and role not in declared_role_names:
+            findings.append(
+                Finding(
+                    "E_STACK_ROLE",
+                    f"{field}.role {role!r} is not one of the declared roles: "
+                    f"{sorted(n for n in declared_role_names if n)}",
+                )
+            )
+        if not isinstance(check_names, list) or not all(
+            isinstance(n, str) and n for n in check_names
+        ):
+            findings.append(
+                Finding("E_STACK_SCHEMA", f"{field}.checks must be a list of check names")
+            )
+            check_names = []
+
+        if stack_id is not None:
+            if stack_id in stack_ids:
+                findings.append(
+                    Finding("E_STACK_DUPLICATE", f"{PROFILE_REL}.stacks has a duplicate id: {stack_id!r}")
+                )
+            else:
+                stack_ids.append(stack_id)
+
+            for name in check_names:
+                claimed_by = checks_claimed_by.get(name)
+                if claimed_by is not None and claimed_by != stack_id:
+                    findings.append(
+                        Finding(
+                            "E_STACK_CHECK_MISMATCH",
+                            f"check {name!r} is claimed by both stacks {claimed_by!r} and "
+                            f"{stack_id!r}",
+                        )
+                    )
+                checks_claimed_by[name] = stack_id
+                check_entry = check_by_name.get(name)
+                if check_entry is None:
+                    findings.append(
+                        Finding(
+                            "E_STACK_CHECK_MISMATCH",
+                            f"{field}.checks names {name!r}, which is not declared in "
+                            f"{CHECKS_REL}",
+                        )
+                    )
+                elif check_entry.get("stack") != stack_id:
+                    findings.append(
+                        Finding(
+                            "E_STACK_CHECK_MISMATCH",
+                            f"{CHECKS_REL} check {name!r} declares stack "
+                            f"{check_entry.get('stack')!r}, but {field} claims it under "
+                            f"{stack_id!r}",
+                        )
+                    )
+
+    # Every checks.json check must belong to exactly one declared stack.
+    for entry in check_entries:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        if name and name not in checks_claimed_by:
+            findings.append(
+                Finding(
+                    "E_STACK_CHECK_MISMATCH",
+                    f"{CHECKS_REL} check {name!r} is not listed under any {PROFILE_REL}.stacks[].checks",
+                )
+            )
+
+    stack_id_set = set(stack_ids)
+    required_names = {
+        entry.get("name") for entry in check_entries
+        if isinstance(entry, dict) and entry.get("required") is True
+    }
+    for i, route in enumerate(routing):
+        if not isinstance(route, dict):
+            continue
+        route_stack = route.get("stack")
+        field = f"{PROFILE_REL}.task_routing[{i}]"
+        if not isinstance(route_stack, str) or not route_stack:
+            continue  # absent/blank route stack is already an E_SCHEMA/route finding elsewhere
+        if route_stack not in stack_id_set:
+            findings.append(
+                Finding(
+                    "E_STACK_ROUTE",
+                    f"{field}.stack {route_stack!r} is not declared in {PROFILE_REL}.stacks",
+                )
+            )
+            continue
+        own_checks = {
+            name for name, owner in checks_claimed_by.items() if owner == route_stack
+        }
+        if not (own_checks | required_names):
+            findings.append(
+                Finding(
+                    "E_STACK_UNRESOLVED",
+                    f"{field}.stack {route_stack!r} resolves no declared checks (no "
+                    "stack-owned check and no repository-wide required check)",
+                )
+            )
+
 
 def _validate_checks(root: Path, findings: "list[Finding]") -> None:
     path = root / CHECKS_REL
@@ -325,6 +509,8 @@ def _validate_checks(root: Path, findings: "list[Finding]") -> None:
         for key in ("stack", "name"):
             if not entry.get(key):
                 findings.append(Finding("E_SCHEMA", f"{field}.{key} is missing"))
+        if "required" in entry and not isinstance(entry["required"], bool):
+            findings.append(Finding("E_SCHEMA", f"{field}.required must be a boolean"))
         argv = entry.get("argv")
         if not isinstance(argv, list) or not argv or not all(isinstance(t, str) and t for t in argv):
             findings.append(
@@ -589,12 +775,13 @@ def _self_test_input(wrapper_source: str) -> dict:
             "core_root": "feature-pipeline-skill",
         },
         "task_routing": [
-            {"task_type": "tooling", "working_root": "tools"},
-            {"task_type": "docs", "working_root": "docs"},
+            {"task_type": "tooling", "working_root": "tools", "stack": "python"},
+            {"task_type": "docs", "working_root": "docs", "stack": "python"},
         ],
         "technology_stacks": [
             {
                 "stack": "python",
+                "role": "executor",
                 "checks": [
                     {
                         "name": "unit",

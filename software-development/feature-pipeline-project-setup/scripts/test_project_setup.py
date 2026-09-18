@@ -32,21 +32,30 @@ def _valid_input() -> dict:
             "core_root": "feature-pipeline-skill",
         },
         "task_routing": [
-            {"task_type": "tooling", "working_root": "tools"},
-            {"task_type": "docs", "working_root": "docs"},
+            {"task_type": "tooling", "working_root": "tools", "stack": "python"},
+            {"task_type": "docs", "working_root": "docs", "stack": "repo"},
         ],
         "technology_stacks": [
             {
                 "stack": "python",
+                "role": "executor",
                 "checks": [
                     {
                         "name": "unit",
                         "argv": ["uv", "run", "python", "-m", "unittest"],
                         "cwd": "feature-pipeline-skill",
+                        "required": True,
                     },
                     {"name": "lint", "argv": ["ruff", "check", "."], "cwd": "."},
                 ],
-            }
+            },
+            {
+                "stack": "repo",
+                "role": "executor",
+                "checks": [
+                    {"name": "docs-check", "argv": ["git", "diff", "--check"], "cwd": "."},
+                ],
+            },
         ],
         "run_state_path": "tools/feature-pipeline/state",
         "roles": [
@@ -127,6 +136,13 @@ class GeneratorTestCase(unittest.TestCase):
             [r["task_type"] for r in profile["task_routing"]], ["tooling", "docs"]
         )
         self.assertNotIn("checks", profile)  # split into checks.json, never both
+        self.assertEqual(
+            profile["stacks"],
+            [
+                {"id": "python", "role": "executor", "checks": ["unit", "lint"]},
+                {"id": "repo", "role": "executor", "checks": ["docs-check"]},
+            ],
+        )
 
         integrations = json.loads((cfg / "integrations.json").read_text(encoding="utf-8"))
         self.assertEqual(report["graphify_enabled"], True)
@@ -144,6 +160,18 @@ class GeneratorTestCase(unittest.TestCase):
         )
         self.assertEqual(gp["scan_root"], ".")
         self.assertEqual(gp["workspace"], "tools/graphify")
+
+    def test_required_check_status_is_preserved_in_checks_json(self) -> None:
+        data = self._input()
+        data["technology_stacks"][0]["checks"][0]["required"] = True
+
+        self._run(data)
+
+        checks = json.loads(
+            (self.project / "tools/feature-pipeline/config/checks.json").read_text("utf-8")
+        )
+        self.assertIs(checks["checks"][0]["required"], True)
+        self.assertNotIn("required", checks["checks"][1])
 
     def test_gitignore_line_added_once_and_preserves_content(self) -> None:
         gitignore = self.project / ".gitignore"
@@ -280,6 +308,33 @@ class GeneratorTestCase(unittest.TestCase):
         data = self._input()
         data["task_routing"][0]["task_type"] = "deployment"
         self._assert_no_writes(data, "unapproved task type")
+
+    def test_duplicate_stack_id_fails_closed(self) -> None:
+        data = self._input()
+        data["technology_stacks"].append(dict(data["technology_stacks"][0]))
+        self._assert_no_writes(data, "duplicate stack id")
+
+    def test_unknown_stack_role_fails_closed(self) -> None:
+        data = self._input()
+        data["technology_stacks"][0]["role"] = "borg"
+        self._assert_no_writes(data, "unknown stack role")
+
+    def test_stack_missing_role_fails_closed(self) -> None:
+        data = self._input()
+        del data["technology_stacks"][0]["role"]
+        self._assert_no_writes(data, "missing role key")
+
+    def test_undeclared_route_stack_fails_closed(self) -> None:
+        data = self._input()
+        data["task_routing"][1]["stack"] = "rust"  # no technology_stacks entry declares it
+        self._assert_no_writes(data, "undeclared route stack")
+
+    def test_stack_with_no_checks_fails_closed(self) -> None:
+        data = self._input()
+        data["technology_stacks"].append(
+            {"stack": "empty", "role": "executor", "checks": []}
+        )
+        self._assert_no_writes(data, "stack with no checks")
 
     def test_graphify_enabled_without_wrapper_source_fails_closed(self) -> None:
         data = self._input()
@@ -524,6 +579,39 @@ class ValidatorTestCase(unittest.TestCase):
         )
         self._assert_single("E_ANCHOR_MISMATCH")
 
+    # -- stacks[] canonical binding ----------------------------------
+
+    def test_legacy_profile_without_stacks_key_fails(self) -> None:
+        self._patch_json(self.profile, lambda o: o.pop("stacks"))
+        self._assert_single("E_STACK_LEGACY_PROFILE")
+
+    def test_duplicate_stack_id_in_profile_fails(self) -> None:
+        self._patch_json(self.profile, lambda o: o["stacks"].append(dict(o["stacks"][0])))
+        self._assert_single("E_STACK_DUPLICATE")
+
+    def test_unknown_stack_role_in_profile_fails(self) -> None:
+        self._patch_json(self.profile, lambda o: o["stacks"][0].__setitem__("role", "borg"))
+        self._assert_single("E_STACK_ROLE")
+
+    def test_undeclared_route_stack_in_profile_fails(self) -> None:
+        self._patch_json(
+            self.profile,
+            lambda o: o["task_routing"][0].__setitem__("stack", "unknown-stack"),
+        )
+        self._assert_single("E_STACK_ROUTE")
+
+    def test_check_stack_mismatch_fails(self) -> None:
+        self._patch_json(self.checks, lambda o: o["checks"][0].__setitem__("stack", "rust"))
+        self._assert_single("E_STACK_CHECK_MISMATCH")
+
+    def test_stack_route_with_no_resolvable_checks_fails(self) -> None:
+        self._patch_json(self.profile, lambda o: o["stacks"][1].__setitem__("checks", []))
+        self._patch_json(
+            self.checks,
+            lambda o: (o["checks"].__delitem__(2), o["checks"][0].pop("required", None)),
+        )
+        self._assert_single("E_STACK_UNRESOLVED")
+
     # -- checks.json ---------------------------------------------------
 
     def test_shell_form_argv_in_checks_fails(self) -> None:
@@ -650,6 +738,154 @@ class ValidatorTestCase(unittest.TestCase):
             encoding="utf-8",
         )
         self._assert_single("E_GIT_CONFIG_IGNORED")
+
+
+class MultiStackFixtureTestCase(unittest.TestCase):
+    """Generate + read-only-validate the two AC-required stack/role matrices:
+    Python+Rust+repo (three stacks, one route each) and TypeScript+docs (two
+    stacks). Every check argv below is a fixture-defined command for this test
+    tree — none is invented for, or asserted against, the umbrella repository's
+    own real toolchain."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.project = Path(self._tmp.name) / "matrix-repo"
+        (self.project / "docs").mkdir(parents=True)
+        (self.project / "feature-pipeline-skill" / "pipeline_core").mkdir(parents=True)
+        (self.project / "feature-pipeline-skill" / "pipeline_core" / "profiles.py").write_text(
+            "# portable core\n", encoding="utf-8"
+        )
+        (self.project / ".agents").mkdir()
+        self.assertEqual(_git(self.project, "init", "-q").returncode, 0)
+
+    def _validate(self) -> list:
+        return vps.run_validation(
+            self.project, self.project / ".agents", self.project / "feature-pipeline-skill"
+        )
+
+    def test_python_rust_repo_matrix_generates_and_validates_clean(self) -> None:
+        data = {
+            "anchors": {
+                "project_root": ".",
+                "agents_root": ".agents",
+                "core_root": "feature-pipeline-skill",
+            },
+            "task_routing": [
+                {"task_type": "python", "working_root": "packages/python", "stack": "python"},
+                {"task_type": "rust", "working_root": "packages/rust", "stack": "rust"},
+                {"task_type": "tooling", "working_root": ".", "stack": "repo"},
+            ],
+            "technology_stacks": [
+                {
+                    "stack": "python",
+                    "role": "executor",
+                    "checks": [
+                        {
+                            "name": "python-tests",
+                            "argv": ["uv", "run", "python", "-m", "unittest"],
+                            "cwd": "packages/python",
+                        }
+                    ],
+                },
+                {
+                    "stack": "rust",
+                    "role": "executor",
+                    "checks": [
+                        {"name": "rust-tests", "argv": ["cargo", "test"], "cwd": "packages/rust"}
+                    ],
+                },
+                {
+                    "stack": "repo",
+                    "role": "executor",
+                    "checks": [
+                        {
+                            "name": "repo-check",
+                            "argv": ["git", "diff", "--check"],
+                            "cwd": ".",
+                            "required": True,
+                        }
+                    ],
+                },
+            ],
+            "run_state_path": "tools/feature-pipeline/state",
+            "roles": [
+                {"role": "executor", "min_grants": ["read", "write"]},
+                {"role": "task_verifier", "min_grants": ["read"]},
+            ],
+            "graphify": {"enabled": False},
+        }
+        (self.project / "packages" / "python").mkdir(parents=True)
+        (self.project / "packages" / "rust").mkdir(parents=True)
+
+        run_setup(data, project_root=self.project, report_path="setup-report.json", confirmed=True)
+        self.assertEqual(_git(self.project, "add", "-A").returncode, 0)
+
+        profile = json.loads(
+            (self.project / "tools/feature-pipeline/config/pipeline.profile.json").read_text("utf-8")
+        )
+        self.assertEqual(
+            profile["stacks"],
+            [
+                {"id": "python", "role": "executor", "checks": ["python-tests"]},
+                {"id": "rust", "role": "executor", "checks": ["rust-tests"]},
+                {"id": "repo", "role": "executor", "checks": ["repo-check"]},
+            ],
+        )
+        self.assertEqual(self._validate(), [])
+
+    def test_typescript_docs_matrix_generates_and_validates_clean(self) -> None:
+        data = {
+            "anchors": {
+                "project_root": ".",
+                "agents_root": ".agents",
+                "core_root": "feature-pipeline-skill",
+            },
+            "task_routing": [
+                {"task_type": "frontend", "working_root": "web", "stack": "typescript"},
+                {"task_type": "docs", "working_root": "docs", "stack": "docs"},
+            ],
+            "technology_stacks": [
+                {
+                    "stack": "typescript",
+                    "role": "executor",
+                    "checks": [
+                        {"name": "ts-typecheck", "argv": ["npx", "tsc", "--noEmit"], "cwd": "web"},
+                        {"name": "ts-lint", "argv": ["npx", "eslint", "."], "cwd": "web"},
+                    ],
+                },
+                {
+                    "stack": "docs",
+                    "role": "task_verifier",
+                    "checks": [
+                        {
+                            "name": "docs-lint",
+                            "argv": ["npx", "markdownlint", "."],
+                            "cwd": "docs",
+                        }
+                    ],
+                },
+            ],
+            "run_state_path": "tools/feature-pipeline/state",
+            "roles": [
+                {"role": "executor", "min_grants": ["read", "write"]},
+                {"role": "task_verifier", "min_grants": ["read"]},
+            ],
+            "graphify": {"enabled": False},
+        }
+        (self.project / "web").mkdir(parents=True)
+
+        run_setup(data, project_root=self.project, report_path="setup-report.json", confirmed=True)
+        self.assertEqual(_git(self.project, "add", "-A").returncode, 0)
+
+        checks = json.loads(
+            (self.project / "tools/feature-pipeline/config/checks.json").read_text("utf-8")
+        )
+        self.assertEqual(
+            sorted(c["name"] for c in checks["checks"]),
+            ["docs-lint", "ts-lint", "ts-typecheck"],
+        )
+        self.assertEqual(self._validate(), [])
 
 
 import smoke_project_setup as smoke
