@@ -114,6 +114,7 @@ EOF
 - Imperative mood: "fix bug" not "fixes bug"
 - Reference issues: `Closes #123`, `Refs #456`
 - Keep description under 72 characters
+- Never include absolute paths from the computer creating the commit in the commit message.
 
 ## Git Safety Protocol
 

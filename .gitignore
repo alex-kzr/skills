@@ -26,3 +26,12 @@ graphify-graph/
 /**/.ruff_cache/
 
 .curator_ledger.jsonl
+
+# local execution locks
+/.locks/
+
+# externally synced skills
+/synced/
+
+# Python bytecode
+*.py[cod]

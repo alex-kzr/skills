@@ -7,7 +7,7 @@ description: Use when a pipeline worker quota or adapter failure occurs.
 
 ## Procedure
 
-1. Inspect the runner-owned failure artifact and distinguish quota/authentication failures from task-verifier findings, test failures, and task-contract rejections.
+1. Inspect the runner-owned failure artifact, execution scope, planned dispatch set, and reused-dependency evidence. Distinguish quota/authentication failures from task-verifier findings, test failures, task-contract rejections, and adapter capability rejection on a predecessor that the focused run had to schedule because reuse was ineligible.
 2. Keep the existing run immutable. Do not resume a run with a different adapter: runtime selection is part of its identity.
 3. When the requested Claude model returns a concrete quota-limit response, use a fresh Codex fallback run with the user-requested model and effort, on the same scoped branch and contract. Read its durable runner result before deciding what follows.
 4. If that fallback is rejected by the task's own strict runtime boundary, preserve both runs. Do not relax isolation, edit runner state, or manufacture a completion.
@@ -20,4 +20,5 @@ description: Use when a pipeline worker quota or adapter failure occurs.
 
 - Probe actual model capacity before dispatch; login status proves authentication, not usable quota.
 - Treat a verifier's quota message as an external orchestration block, not as a failed acceptance criterion; its already-recorded test evidence remains evidence but cannot replace the missing independent verdict.
+- When a focused task schedules an upstream predecessor because reusable evidence is ineligible, classify a strict-adapter rejection on that predecessor as a dependency-chain capability block, not a failure of the requested task; the selected adapter is pinned to the whole run.
 - Never weaken a strict adapter-isolation rejection to make a fallback run; that converts a required safety boundary into an untracked exception.

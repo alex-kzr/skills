@@ -10,4 +10,4 @@ Git operations and workflows for version control.
 
 | Type | Path | Description | When to open |
 |---|---|---|---|
-| Skill | [git-commit/](git-commit/SKILL.md) | Execute git commit with conventional commit message analysis, intelligent staging, and message generation. | Open when user asks to commit changes, create a git commit, or mentions "/commit". |
+| Skill | [git-commit/](git-commit/SKILL.md) | Create conventional commits with diff analysis, scoped staging, and messages free of host-absolute paths. | Open when user asks to commit changes, generate a commit message, or mentions "/commit". |
