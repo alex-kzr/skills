@@ -17,6 +17,7 @@ Skills for document creation, presentations, spreadsheets, project management, a
 | Skill | [google-workspace/](google-workspace/SKILL.md) | Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python. | Open when working with Google Workspace apps. |
 | Skill | [linear/](linear/SKILL.md) | Linear: manage issues, projects, teams via GraphQL + curl. | Open when managing Linear issues or projects. |
 | Skill | [maps/](maps/SKILL.md) | Geocode, POIs, routes, timezones via OpenStreetMap/OSRM. | Open when working with maps, geocoding, or routing. |
+| Skill | [markdown-documentation/](markdown-documentation/SKILL.md) | Maintain linked Markdown specs, split entity documentation, and apply accepted decisions consistently across schemas and indexes. | Open when reorganizing Markdown specifications or resolving open questions across linked documentation. |
 | Skill | [meeting-action-items/](meeting-action-items/SKILL.md) | Turn meeting notes into cited decisions, owners, and tickets. | Open when extracting follow-up work from meeting notes. |
 | Skill | [nano-pdf/](nano-pdf/SKILL.md) | Edit text in existing PDFs through natural-language prompts. | Open when changing text in an existing PDF. |
 | Skill | [notion/](notion/SKILL.md) | Notion API via curl: pages, databases, blocks, search. | Open when reading or writing Notion pages or databases. |

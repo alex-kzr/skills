@@ -13,5 +13,5 @@ Skills for delegating coding and tasks to autonomous AI agent processes.
 | Skill | [claude-code/](claude-code/SKILL.md) | Delegate coding to Claude Code CLI (features, PRs). | Open when delegating a coding task to Claude Code. |
 | Skill | [computer-use/](computer-use/SKILL.md) | Drive the desktop through Hermes' background-first action vocabulary and escalate on signal. | Open when automating desktop or GUI interactions through Hermes. |
 | Skill | [codex/](codex/SKILL.md) | Delegate coding to OpenAI Codex CLI (features, PRs). | Open when delegating a coding task to Codex. |
-| Skill | [hermes-agent/](hermes-agent/SKILL.md) | Configure, extend, or contribute to Hermes Agent. | Open when configuring or developing Hermes Agent itself. |
+| Skill | [hermes-agent/](hermes-agent/SKILL.md) | Configure, extend, or contribute to Hermes Agent, including speech transcription language and provider settings. | Open when configuring or developing Hermes Agent, or diagnosing transcription language and accuracy. |
 | Skill | [opencode/](opencode/SKILL.md) | Delegate coding to OpenCode CLI (features, PR review). | Open when delegating a coding task to OpenCode. |

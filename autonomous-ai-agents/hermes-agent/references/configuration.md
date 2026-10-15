@@ -68,9 +68,12 @@ Voice messages from messaging platforms are auto-transcribed.
 stt:
   enabled: true
   provider: local   # local (faster-whisper, free) | groq | openai | mistral | elevenlabs | deepinfra
+  language: ""      # blank = detect spoken language; default "en" forces English
   local:
     model: base     # tiny, base, small, medium, large-v3
 ```
+
+For a known fixed language, set `stt.language ru` (or another ISO code). For multilingual speech, use `hermes config set stt.language ''`; provider-specific `stt.<provider>.language` and `HERMES_LOCAL_STT_LANGUAGE` can still override auto-detection. Verify with a cached sample via the installed Hermes venv's Python and `tools.transcription_tools.transcribe_audio`, checking both provider and transcript. A larger local model (`small`/`medium`) may help accuracy but requires extra download and CPU/RAM.
 
 Auto-detect priority: local faster-whisper (`pip install faster-whisper`) → Groq (`GROQ_API_KEY`, free tier) → OpenAI (`VOICE_TOOLS_OPENAI_KEY`) → Mistral Voxtral (`MISTRAL_API_KEY`).
 
