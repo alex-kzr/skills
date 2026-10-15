@@ -1,5 +1,5 @@
 ---
-description: Software development skills — debugging, TDD, planning, codebase metrics, GitHub CLI workflows, and agent delegation.
+description: Software development workflows — debugging, TDD, planning, feature-pipeline operation and recovery, shared runtime maintenance, codebase metrics, GitHub CLI, and agent delegation.
 ---
 
 # Software Development
@@ -12,6 +12,7 @@ Skills for structured software development workflows and engineering best practi
 |---|---|---|---|
 | Catalog | [backend-dev/](backend-dev/DESCRIPTION.md) | Backend development skills by language and framework — Rust, and more. | Open when working on server-side code, REST APIs, databases, or CLI tools. |
 | Catalog | [frontend-dev/](frontend-dev/DESCRIPTION.md) | Frontend development skills — React, Tailwind CSS, and Vite. | Open when working on client-side code, UI components, or frontend build tooling. |
+| Skill | [agents-runtime/](agents-runtime/SKILL.md) | Inspect and maintain the shared agents runtime on Windows PowerShell using committed Python and Node lockfiles. | Open when checking runtime health, exporting diagnostics, or explicitly bootstrapping, syncing, or cleaning the shared runtime. |
 | Skill | [debugging/](debugging/SKILL.md) | Debugging methodology and tools: systematic root cause analysis, Python (pdb/debugpy), Node.js (inspect/CDP), and Hermes TUI debugging. | Open when debugging any codebase systematically. |
 | Skill | [dogfood/](dogfood/SKILL.md) | Systematic exploratory QA testing of web applications — find bugs, capture evidence, and produce reports. | Open when the task is to QA or bug-hunt a web app via browser automation. |
 | Skill | [delegation-patterns/](delegation-patterns/SKILL.md) | Delegation patterns: batch parallel, sequential, conditional, and multi-stage orchestration workflows across Hermes, Codex, Claude Code, or equivalent subagent mechanisms. | Open when designing delegation or multi-stage orchestration flows. |
