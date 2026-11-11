@@ -19,10 +19,11 @@ Skills for document creation, presentations, spreadsheets, project management, a
 | Skill | [maps/](maps/SKILL.md) | Geocode, POIs, routes, timezones via OpenStreetMap/OSRM. | Open when working with maps, geocoding, or routing. |
 | Skill | [markdown-documentation/](markdown-documentation/SKILL.md) | Maintain linked Markdown specs, split entity documentation, and apply accepted decisions consistently across schemas and indexes. | Open when reorganizing Markdown specifications or resolving open questions across linked documentation. |
 | Skill | [meeting-action-items/](meeting-action-items/SKILL.md) | Turn meeting notes into cited decisions, owners, and tickets. | Open when extracting follow-up work from meeting notes. |
+| Skill | [microsoft-office/](microsoft-office/SKILL.md) | Create, read, edit, and template Word, PowerPoint, and Excel files using offline tools. | Open when working with DOCX, PPTX, XLSX, or CSV files. |
 | Skill | [nano-pdf/](nano-pdf/SKILL.md) | Edit text in existing PDFs through natural-language prompts. | Open when changing text in an existing PDF. |
 | Skill | [notion/](notion/SKILL.md) | Notion API via curl: pages, databases, blocks, search. | Open when reading or writing Notion pages or databases. |
 | Skill | [ocr-and-documents/](ocr-and-documents/SKILL.md) | Extract text from PDFs and scanned documents with OCR tools. | Open when OCR or text extraction is needed for a document. |
-| Skill | [pdf/](pdf/SKILL.md) | Create, read, merge, fill, OCR, and edit text in PDF files. | Open when creating, extracting from, or modifying a PDF. |
+| Skill | [pdf/](pdf/SKILL.md) | Create, read, merge, fill, OCR, and edit PDF files using shared document tools. | Open when creating, extracting from, or modifying a PDF. |
 | Skill | [pdf-tools/](pdf-tools/SKILL.md) | PDF reading, OCR extraction, splitting, merging, and text editing via pymupdf, marker-pdf, and nano-pdf. | Open when reading, extracting, splitting, merging, or editing PDFs. |
 | Skill | [powerpoint/](powerpoint/SKILL.md) | Create, read, edit .pptx decks, slides, notes, templates. | Open when generating or editing PowerPoint presentations. |
 | Skill | [product-price-monitor/](product-price-monitor/SKILL.md) | Monitor product, flight, or listing prices and alert at a target. | Open when tracking prices or availability. |

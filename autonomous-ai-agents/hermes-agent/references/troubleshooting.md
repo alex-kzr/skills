@@ -39,6 +39,7 @@ Common gateway problems:
 
 ### Platform-specific issues
 - **Discord bot silent**: Must enable **Message Content Intent** in Bot → Privileged Gateway Intents.
+- **Discord auto-thread creation fails**: Inspect recent `$HERMES_HOME/logs/gateway.log` entries for `Auto-thread creation failed`, both direct and fallback errors, and `Retry in` before changing permissions or configuration. For a rate limit, calculate the earliest retry from the log timestamp and reported delay; then verify a new thread and treat a single success as recovery of that attempt, not proof the limit will not recur. Distinguish rate limiting from an unrelated model-auth error. If duplicate seed messages appear without threads, inspect the current Discord adapter's fallback/retry logic: a seed message can be posted before thread creation fails, so its text alone does not prove a thread was created.
 - **Slack bot only works in DMs**: Must subscribe to `message.channels` event. Without it, the bot ignores public channels.
 - **Windows-specific issues** (`Alt+Enter` newline, WinError 10106, UTF-8 BOM config, line endings): see `references/windows-quirks.md`.
 
